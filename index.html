@@ -13,6 +13,7 @@
 <script src="data_checkout_c.js?v=20260824a"></script>
 <script src="aux_data.js?v=20260824a"></script>
 <script src="nat_data.js?v=20260824a"></script>
+<script src="dist_data.js?v=20260824a"></script>
 <style>
 :root{--ink:#1F1A17;--ink2:#383838;--muted:#8A8580;--line:#EDE7DF;--panel:#fff;--accent:#FF6000;--accent-deep:#D14E00;--accent2:#009538;--green-deep:#007A2F;--orange-soft:#FFF1E6;
   --pos:#009538;--neg:#dc2626;--chip:#FFF1E6;--page:#FFFCF8}
@@ -192,6 +193,27 @@ body.dark .mbmodal-body li{color:#cbd5e1}
 body.dark .mbmodal-body td{color:#e2e8f0}
 body.dark .mbmodal-body th{color:#94a3b8;background:#111c30}
 body.dark .hk{background:#1c2840}
+.dst-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px}
+.dst-lb{font-size:13px;color:var(--muted);font-weight:600}
+.dst-sel{padding:6px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff;color:inherit}
+body.dark .dst-sel{background:#111c30;border-color:#243049}
+.dst-warn{margin-top:10px;padding:8px 11px;border-radius:8px;background:rgba(255,96,0,.09);border:1px solid rgba(255,96,0,.25);font-size:12.5px;line-height:1.6}
+.dst-lg{display:flex;flex-wrap:wrap;gap:9px;margin:2px 0 12px;font-size:11.5px;color:var(--muted)}
+.dst-lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.dst-wrap{display:flex;flex-direction:column;gap:6px}
+.dst-row{display:grid;grid-template-columns:132px 1fr 168px;align-items:center;gap:11px}
+.dst-row.dst-cmp{opacity:.72}
+.dst-k{font-size:12.5px;color:var(--muted);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dst-row.dst-tot .dst-k{color:inherit;font-weight:700}
+.dst-b{display:flex;height:22px;border-radius:4px;overflow:hidden;background:rgba(127,127,127,.13)}
+.dst-s{position:relative;min-width:0;transition:filter .12s}
+.dst-s:hover{filter:brightness(1.12)}
+.dst-s span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:#fff;font-weight:700;text-shadow:0 1px 1px rgba(0,0,0,.25)}
+.dst-m{font-size:11.5px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.dst-m b{color:inherit;font-weight:700}
+.dst-none{font-size:12.5px;color:var(--muted);padding:14px 0}
+.dst-thin{font-size:11.5px;color:var(--orange);padding:2px 0}
+@media(max-width:760px){.dst-row{grid-template-columns:92px 1fr;row-gap:2px}.dst-m{grid-column:2;text-align:right}}
 .hi-tabs{display:flex;gap:6px;margin:6px 0 10px}
 .hi-tg{font-size:12px;padding:5px 12px;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:8px;cursor:pointer;font-weight:600}
 .hi-tg.active{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -411,6 +433,7 @@ body.dark .tcsv{background:#16223a;border-color:#243049}
     <button class="tab" data-t="s" data-i18n="tab_s">🎯 영업 액션</button>
     <button class="tab" data-t="mg" data-i18n="tab_mg">🏨 관리 호텔</button>
     <button class="tab" data-t="nat" data-i18n="tab_nat">🛂 국적 분석</button>
+    <button class="tab" data-t="dist" data-i18n="tab_dist">⏱️ LOS · Lead Time</button>
   </div>
 
   <div id="grainSeg" class="grainseg"><button class="gbtn active" data-g="w" data-i18n="g_w">주간</button><button class="gbtn" data-g="m" data-i18n="g_m">월간</button><button class="gbtn" data-g="q" data-i18n="g_q">분기</button></div>
@@ -549,6 +572,36 @@ body.dark .tcsv{background:#16223a;border-color:#243049}
     </div>
   </div>
 
+  <div id="view-dist" class="hide">
+    <div class="card">
+      <h3><span data-i18n="dist_title">⏱️ 투숙기간(LOS) · 예약 리드타임 분포</span> <span class="pill" id="distBasisPill"></span></h3>
+      <p class="sub" data-i18n="dist_sub">평균 하나로는 예약 형태를 알 수 없습니다. 구간별로 나눠 실제 분포를 봅니다.</p>
+      <div class="dst-bar">
+        <span class="dst-lb" data-i18n="dist_dim">행 기준</span>
+        <select id="distDim" class="dst-sel">
+          <option value="total" data-i18n="dist_d_total">전체</option>
+          <option value="region" data-i18n="dist_d_region">지역별</option>
+          <option value="pic" data-i18n="dist_d_pic">담당자별</option>
+          <option value="nat" data-i18n="dist_d_nat">고객 국적별</option>
+        </select>
+        <button class="tcsv" id="distCsv">⬇ CSV</button>
+        <span id="distCut" class="muted" style="font-size:12px;margin-left:auto"></span>
+      </div>
+      <div id="distWarn" class="dst-warn" style="display:none"></div>
+    </div>
+    <div class="card">
+      <h3><span data-i18n="dist_los">🛏️ 투숙기간 (Length of Stay)</span></h3>
+      <div id="distLosLg" class="dst-lg"></div>
+      <div id="distLos" class="dst-wrap"></div>
+    </div>
+    <div class="card">
+      <h3><span data-i18n="dist_lead">📆 예약 리드타임 (Lead Time)</span></h3>
+      <div id="distLeadLg" class="dst-lg"></div>
+      <div id="distLead" class="dst-wrap"></div>
+      <p class="sub" style="margin-top:10px" data-i18n="dist_note">리드타임은 체크인일 − 예약일입니다. 평균과 중앙값이 크게 벌어져 있으면 소수의 장기 선행예약이 평균을 끌어올리고 있다는 뜻입니다.</p>
+    </div>
+  </div>
+
   <div id="globalBreakdown">
   <div class="card" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 18px">
     <span style="font-weight:600" data-i18n="bd_title">📌 기간별 분석</span>
@@ -607,6 +660,23 @@ const TT={
  tab_w:{ko:'🗓️ 주간 (Weekly)',en:'🗓️ Weekly',vi:'🗓️ Theo tuần'}, tab_r:{ko:'🌍 전체 흐름 (Overall Flow)',en:'🌍 Overall Flow',vi:'🌍 Tổng quan'}, tab_trend:{ko:'📊 실적 추이',en:'📊 Trend',vi:'📊 Xu hướng'}, g_w:{ko:'주간',en:'Weekly',vi:'Tuần'}, g_m:{ko:'월간',en:'Monthly',vi:'Tháng'}, g_q:{ko:'분기',en:'Quarterly',vi:'Quý'}, pace_sel:{ko:'투숙월',en:'Stay month',vi:'Tháng ở'},
  tab_p:{ko:'📈 부킹 페이스 (Pickup)',en:'📈 Pickup',vi:'📈 Tiến độ đặt (Pickup)'}, tab_s:{ko:'🎯 영업 액션',en:'🎯 Sales Actions',vi:'🎯 Hành động bán hàng'}, tab_mg:{ko:'🏨 관리 호텔',en:'🏨 Managed Hotels',vi:'🏨 Khách sạn quản lý'},
  tab_nat:{ko:'🛂 국적 분석',en:'🛂 Passport Mix',vi:'🛂 Phân tích quốc tịch'},
+ tab_dist:{ko:'⏱️ LOS · Lead Time',en:'⏱️ LOS · Lead Time',vi:'⏱️ LOS · Lead Time'},
+ dist_title:{ko:'⏱️ 투숙기간(LOS) · 예약 리드타임 분포',en:'⏱️ Length of Stay & Lead Time Distribution',vi:'⏱️ Phân bố thời gian lưu trú & thời gian đặt trước'},
+ dist_sub:{ko:'평균 하나로는 예약 형태를 알 수 없습니다. 구간별로 나눠 실제 분포를 봅니다.',en:'A single average hides how bookings actually behave. This breaks the same data into buckets.',vi:'Chỉ một giá trị trung bình không cho thấy hành vi đặt phòng thực tế. Đây là phân bố theo khoảng.'},
+ dist_dim:{ko:'행 기준',en:'Group by',vi:'Nhóm theo'},
+ dist_d_total:{ko:'전체',en:'Total',vi:'Tổng'},
+ dist_d_region:{ko:'지역별',en:'By region',vi:'Theo khu vực'},
+ dist_d_pic:{ko:'담당자별',en:'By account owner',vi:'Theo người phụ trách'},
+ dist_d_nat:{ko:'고객 국적별',en:'By guest nationality',vi:'Theo quốc tịch khách'},
+ dist_los:{ko:'🛏️ 투숙기간 (Length of Stay)',en:'🛏️ Length of Stay',vi:'🛏️ Thời gian lưu trú'},
+ dist_lead:{ko:'📆 예약 리드타임 (Lead Time)',en:'📆 Booking Lead Time',vi:'📆 Thời gian đặt trước'},
+ dist_note:{ko:'리드타임은 체크인일 − 예약일입니다. 평균과 중앙값이 크게 벌어져 있으면 소수의 장기 선행예약이 평균을 끌어올리고 있다는 뜻입니다.',en:'Lead time is check-in date minus booking date. A wide gap between mean and median means a few long-lead bookings are pulling the average up.',vi:'Lead time = ngày nhận phòng trừ ngày đặt. Chênh lệch lớn giữa trung bình và trung vị nghĩa là một số ít đặt sớm đang kéo trung bình lên.'},
+ dist_none:{ko:'해당 조건의 분포 데이터가 없습니다.',en:'No distribution data for this selection.',vi:'Không có dữ liệu phân bố cho lựa chọn này.'},
+ dist_prev:{ko:'전년 동기',en:'Same period LY',vi:'Cùng kỳ năm trước'},
+ dist_thin:{ko:'표본 부족',en:'insufficient sample',vi:'mẫu quá nhỏ'},
+ dist_cut:{ko:'집계 기준일',en:'Data as of',vi:'Dữ liệu tính đến'},
+ dist_mean:{ko:'평균',en:'mean',vi:'TB'},
+ dist_med:{ko:'중앙값',en:'median',vi:'trung vị'},
  nat_title:{ko:'🛂 투숙객 패스포트(국적) 분석',en:'🛂 Guest Passport (Nationality) Analysis',vi:'🛂 Phân tích hộ chiếu (quốc tịch) khách'},
  nat_sub:{ko:'실제 게스트 이름(성씨) 기반 국적 추정 — 채널·판매사가 아닌 실투숙객 기준입니다.',en:'Nationality inferred from guest surname — actual guests, not the booking channel.',vi:'Quốc tịch suy ra từ họ của khách — khách thực tế, không phải kênh bán.'},
  nat_warn:{ko:"⚠️ 성씨 기반 추정이므로 미등록 성씨는 '기타'로 집계될 수 있습니다 (방향성 지표).",en:"⚠️ Surname-based estimate; unlisted surnames fall into 'Other' (directional indicator).",vi:"⚠️ Ước tính theo họ; họ chưa có trong từ điển sẽ vào 'Khác' (chỉ báo định hướng)."},
@@ -1280,6 +1350,118 @@ function _natCtryLab(c){
   var vi={Vietnam:'Việt Nam',Thailand:'Thái Lan',Malaysia:'Malaysia','Hong Kong':'Hồng Kông',Taiwan:'Đài Loan',Korea:'Hàn Quốc',Japan:'Nhật Bản'};
   return (LANG==='ko'?(ko[c]||c):LANG==='vi'?(vi[c]||c):c);
 }
+// ── LOS · Lead Time 분포 ────────────────────────────────────
+var DISTDIM='total';
+function _distLbl(kind){
+  var M=window.OMH_DIST_META||{}; var o=(M[kind]&&M[kind].labels)||{};
+  return o[LANG]||o.ko||[];
+}
+function _distNum(v){try{return v.toLocaleString();}catch(e){return String(v);}}
+function _distUnit(kind){
+  if(kind==='los')return LANG==='ko'?'박':LANG==='vi'?' đêm':' nt';
+  return LANG==='ko'?'일':LANG==='vi'?' ng':'d';
+}
+function _distBar(blk,kind,colors){
+  var lbl=_distLbl(kind), n=blk.n||0;
+  if(!n)return '<div class="dst-b"></div>';
+  var seg=blk.b.map(function(c,i){
+    if(!c)return '';
+    var p=c/n*100;
+    var t=lbl[i]+' · '+_distNum(c)+' ('+p.toFixed(1)+'%)';
+    return '<div class="dst-s" style="width:'+p+'%;background:'+colors[i%colors.length]+'" title="'+t+'">'
+      +(p>=8?'<span>'+p.toFixed(0)+'</span>':'')+'</div>';
+  }).join('');
+  return '<div class="dst-b">'+seg+'</div>';
+}
+function _distMeta(blk,kind){
+  var u=_distUnit(kind);
+  return '<div class="dst-m"><b>'+_tt('dist_mean')+' '+blk.mean.toFixed(kind==='los'?2:1)+u+'</b>'
+    +' · '+_tt('dist_med')+' '+blk.med.toFixed(kind==='los'?1:0)+u
+    +' · n='+_distNum(blk.n)+'</div>';
+}
+function _distRows(e,kind,colors){
+  var M=window.OMH_DIST_META||{}, MIN=M.minSample||30, out=[];
+  if(DISTDIM==='total'){
+    out.push({k:_tt('dist_d_total'),blk:e.total[kind],cls:' dst-tot'});
+    if(e.prev&&e.prev[kind]&&e.prev[kind].n)
+      out.push({k:_tt('dist_prev'),blk:e.prev[kind],cls:' dst-cmp'});
+  }else{
+    (e[DISTDIM]||[]).forEach(function(r){out.push({k:r.k,blk:r[kind],cls:''});});
+  }
+  return out.map(function(r){
+    if(!r.blk||r.blk.n<MIN)
+      return '<div class="dst-row'+r.cls+'"><div class="dst-k" title="'+r.k+'">'+r.k+'</div>'
+        +'<div class="dst-thin">'+_tt('dist_thin')+' (n='+_distNum((r.blk&&r.blk.n)||0)+')</div><div class="dst-m"></div></div>';
+    return '<div class="dst-row'+r.cls+'"><div class="dst-k" title="'+r.k+'">'+r.k+'</div>'
+      +_distBar(r.blk,kind,colors)+_distMeta(r.blk,kind)+'</div>';
+  }).join('');
+}
+function _distLegend(kind,colors){
+  return _distLbl(kind).map(function(s,i){
+    return '<span><i style="background:'+colors[i%colors.length]+'"></i>'+s+'</span>';}).join('');
+}
+function renderDist(){
+  var host=$('distLos'); if(!host)return;
+  var M=window.OMH_DIST_META||{};
+  if(!window.OMH_DIST){host.innerHTML='<div class="dst-none">'+_tt('dist_none')+'</div>';
+    if($('distLead'))$('distLead').innerHTML='';return;}
+  var pill=$('distBasisPill');
+  try{ if(pill&&CURY&&DATA.datasets[CURY])pill.textContent=tBasis(DATA.datasets[CURY].meta.basis_ko); }catch(e){}
+  if($('distCut'))$('distCut').textContent=_tt('dist_cut')+' '+(M.cut||'-')+' · '+(M.year||'');
+  var e=(window.OMH_DIST[BASIS]||{})[CURCTRY];
+  if(!e){host.innerHTML='<div class="dst-none">'+_tt('dist_none')+'</div>';
+    if($('distLead'))$('distLead').innerHTML='';
+    if($('distWarn'))$('distWarn').style.display='none';return;}
+  var CL=(M.colors||['#2a78d6']), CD=(M.colors_lead||CL);
+  $('distLosLg').innerHTML=_distLegend('los',CL);
+  $('distLeadLg').innerHTML=_distLegend('lead',CD);
+  host.innerHTML=_distRows(e,'los',CL);
+  $('distLead').innerHTML=_distRows(e,'lead',CD);
+  var w=$('distWarn');
+  if(w){
+    if(DISTDIM==='nat'){
+      w.style.display='';
+      w.innerHTML=(LANG==='ko')
+        ?'⚠️ 국적은 게스트 성씨 기반 추정치입니다. 국적 데이터가 없는 예약은 이 화면에서 제외되므로 합계가 전체와 다릅니다.'
+        :(LANG==='vi')
+        ?'⚠️ Quốc tịch được ước tính theo họ của khách. Các đặt phòng không có dữ liệu quốc tịch bị loại khỏi màn hình này.'
+        :'⚠️ Nationality is estimated from the guest surname. Bookings without nationality data are excluded here, so totals differ from the overall figure.';
+    }else{w.style.display='none';}
+  }
+}
+function _distCsv(){
+  var e=(window.OMH_DIST&&window.OMH_DIST[BASIS]||{})[CURCTRY]; if(!e)return;
+  var M=window.OMH_DIST_META||{}, rows=[];
+  ['los','lead'].forEach(function(kind){
+    var lbl=_distLbl(kind);
+    var src=(DISTDIM==='total')
+      ?[{k:'TOTAL',blk:e.total[kind]}].concat(e.prev&&e.prev[kind]&&e.prev[kind].n?[{k:'PREV_YEAR',blk:e.prev[kind]}]:[])
+      :(e[DISTDIM]||[]).map(function(r){return {k:r.k,blk:r[kind]};});
+    src.forEach(function(r){
+      if(!r.blk)return;
+      var base=[kind,r.k,r.blk.n,r.blk.mean,r.blk.med];
+      var pct=r.blk.b.map(function(c){return r.blk.n?(c/r.blk.n*100).toFixed(1):'0.0';});
+      rows.push(base.concat(r.blk.b).concat(pct));
+    });
+  });
+  var hl=_distLbl('los'), hd=_distLbl('lead');
+  var head=['metric','group','n','mean','median']
+    .concat(hl.map(function(x){return x+'_n';})).concat(hd.map(function(x){return x+'_n';}))
+    .concat(hl.map(function(x){return x+'_%';})).concat(hd.map(function(x){return x+'_%';}));
+  var q=function(v){v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  var csv=[head.join(',')].concat(rows.map(function(r){return r.map(q).join(',');})).join('\n');
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}));
+  a.download='los_leadtime_'+CURCTRY.replace(/\s+/g,'_')+'_'+BASIS+'_'+DISTDIM+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
+document.addEventListener('change',function(ev){
+  if(ev.target&&ev.target.id==='distDim'){DISTDIM=ev.target.value;renderDist();}
+});
+document.addEventListener('click',function(ev){
+  if(ev.target&&ev.target.id==='distCsv'){_distCsv();}
+});
+
 function renderNat(){
   var host=$('natMix'), dhost=$('natDest'), chost=$('natCity');
   if(!host||!window.OMH_NAT){ if(host)host.innerHTML=''; return; }
@@ -1469,6 +1651,7 @@ function render(yr){
    window._NINS='📝 <b>'+L('ins_title')+'</b><br>'+ins.map(t=>'• '+t).join('<br>');}
   window._PINS=buildPickupIns(); applyTabInsight();
   if(!$('view-nat').classList.contains('hide'))renderNat();
+  if($('view-dist')&&!$('view-dist').classList.contains('hide'))renderDist();
   {var _af=[]; if(CURPIC!=='ALL')_af.push('<span class="fchip">'+LX('담당자','PIC','PIC')+': '+tD(CURPIC)+'</span>'); if(CURRGN!=='ALL')_af.push('<span class="fchip">'+LX('지역','Region','Khu vực')+': '+CURRGN+'</span>'); if(CURCHN!=='ALL')_af.push('<span class="fchip">'+LX('체인','Chain','Chuỗi')+': '+CURCHN+'</span>'); if($('activeFilters')){if(_af.length){$('activeFilters').style.display='';$('activeFilters').innerHTML='<b>'+LX('적용 필터','Active filters','Bộ lọc')+':</b> '+_af.join(' ');}else{$('activeFilters').style.display='none';}}}
 
   const q=D.quarterly;
@@ -1888,10 +2071,11 @@ document.querySelectorAll('.ytab').forEach(b=>b.addEventListener('click',()=>ren
 // grain tabs
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');
-  ['q','m','w','wow','r','p','s','mg','nat'].forEach(v=>$('view-'+v).classList.add('hide'));
+  ['q','m','w','wow','r','p','s','mg','nat','dist'].forEach(v=>$('view-'+v).classList.add('hide'));
   $('view-'+t.dataset.t).classList.remove('hide');
-  $('globalBreakdown').classList.toggle('hide', t.dataset.t==='wow'||t.dataset.t==='r'||t.dataset.t==='p'||t.dataset.t==='s'||t.dataset.t==='mg'||t.dataset.t==='nat');
+  $('globalBreakdown').classList.toggle('hide', t.dataset.t==='wow'||t.dataset.t==='r'||t.dataset.t==='p'||t.dataset.t==='s'||t.dataset.t==='mg'||t.dataset.t==='nat'||t.dataset.t==='dist');
   if(t.dataset.t==='nat')renderNat();
+  if(t.dataset.t==='dist')renderDist();
   var _isT=(t.dataset.t==='w'); if($('grainSeg'))$('grainSeg').style.display=_isT?'inline-flex':'none'; if(_isT){showGrain();fillBdPeriods();renderBreakdown();}
   applyTabInsight();}));
 document.querySelectorAll('#grainSeg .gbtn').forEach(function(b){b.addEventListener('click',function(){GRAIN=b.dataset.g;showGrain();fillBdPeriods();renderBreakdown();applyTabInsight();});});
