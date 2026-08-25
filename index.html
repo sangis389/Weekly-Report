@@ -202,19 +202,17 @@ body.dark .dst-sel{background:#111c30;border-color:#243049}
 .dst-lg{display:flex;flex-wrap:wrap;gap:9px;margin:2px 0 12px;font-size:11.5px;color:var(--muted)}
 .dst-lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
 .dst-wrap{display:flex;flex-direction:column;gap:6px}
-.dst-row{display:grid;grid-template-columns:126px 1fr minmax(196px,auto);align-items:center;gap:11px}
+.dst-row{display:grid;grid-template-columns:132px 1fr;align-items:center;gap:12px}
 .dst-row.dst-cmp{opacity:.72}
-.dst-k{font-size:12.5px;color:var(--muted);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dst-k{font-size:12.5px;color:var(--muted);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:help}
 .dst-row.dst-tot .dst-k{color:inherit;font-weight:700}
-.dst-b{display:flex;height:22px;border-radius:4px;overflow:hidden;background:rgba(127,127,127,.13)}
+.dst-b{display:flex;height:24px;border-radius:4px;overflow:hidden;background:rgba(127,127,127,.13)}
 .dst-s{position:relative;min-width:0;transition:filter .12s}
 .dst-s:hover{filter:brightness(1.12)}
-.dst-s span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:#fff;font-weight:700;text-shadow:0 1px 1px rgba(0,0,0,.25)}
-.dst-m{font-size:11.5px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums;text-align:right}
-.dst-m b{color:inherit;font-weight:700}
+.dst-s span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:700;text-shadow:0 1px 1px rgba(0,0,0,.25);white-space:nowrap}
 .dst-none{font-size:12.5px;color:var(--muted);padding:14px 0}
 .dst-thin{font-size:11.5px;color:var(--orange);padding:2px 0}
-@media(max-width:980px){.dst-row{grid-template-columns:104px 1fr;row-gap:2px}.dst-m{grid-column:2;text-align:right}}
+@media(max-width:760px){.dst-row{grid-template-columns:96px 1fr;gap:8px}}
 .hi-tabs{display:flex;gap:6px;margin:6px 0 10px}
 .hi-tg{font-size:12px;padding:5px 12px;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:8px;cursor:pointer;font-weight:600}
 .hi-tg.active{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -1365,21 +1363,34 @@ function _distUnit(kind){
 function _distBar(blk,kind,colors){
   var lbl=_distLbl(kind), n=blk.n||0;
   if(!n)return '<div class="dst-b"></div>';
+  // 라벨은 모든 구간에 넣고, 실제 렌더링 폭을 재서 안 들어가는 것만 숨긴다(_distFit).
   var seg=blk.b.map(function(c,i){
     if(!c)return '';
     var p=c/n*100;
     return '<div class="dst-s" style="width:'+p+'%;background:'+colors[i%colors.length]+'" title="'
       +lbl[i]+' · '+_distNum(c)+' ('+p.toFixed(1)+'%)">'
-      +(p>=8?'<span>'+p.toFixed(0)+'</span>':'')+'</div>';
+      +'<span>'+(p<1?p.toFixed(1):p.toFixed(0))+'</span></div>';
   }).join('');
   return '<div class="dst-b">'+seg+'</div>';
 }
-function _distMeta(blk,kind){
+// 평균·중앙값·표본수는 행 라벨 툴팁으로 (막대 공간을 최대한 넓게 쓰기 위해)
+function _distTip(blk,kind){
+  if(!blk||!blk.n)return '';
   var u=_distUnit(kind);
-  return '<div class="dst-m"><b>'+_tt('dist_mean')+' '+blk.mean.toFixed(kind==='los'?2:1)+u+'</b>'
+  return _tt('dist_mean')+' '+blk.mean.toFixed(kind==='los'?2:1)+u
     +' · '+_tt('dist_med')+' '+blk.med.toFixed(kind==='los'?1:0)+u
-    +' · n='+_distNum(blk.n)+'</div>';
+    +' · n='+_distNum(blk.n);
 }
+// 막대 폭에 안 들어가는 % 라벨을 숨긴다. 렌더 직후와 창 크기 변경 때 호출.
+function _distFit(){
+  var v=$('view-dist'); if(!v||v.classList.contains('hide'))return;
+  v.querySelectorAll('.dst-s').forEach(function(el){
+    var sp=el.firstElementChild; if(!sp)return;
+    sp.style.visibility='visible';
+    if(el.offsetWidth < sp.offsetWidth+4) sp.style.visibility='hidden';
+  });
+}
+var _dfT; window.addEventListener('resize',function(){clearTimeout(_dfT);_dfT=setTimeout(_distFit,140);});
 // 사이드바 선택에 맞는 범위 데이터
 function _distScope(e){
   var pic=(typeof CURPIC!=='undefined')?CURPIC:'ALL';
@@ -1397,7 +1408,7 @@ function _distRows(e,kind,colors,sc){
   var M=window.OMH_DIST_META||{}, MIN=M.minSample||30, out=[];
   if(sc.partial){
     return '<div class="dst-row dst-tot"><div class="dst-k" title="'+sc.label+'">'+sc.label+'</div>'
-      +'<div class="dst-thin">'+_tt('dist_thin')+'</div><div class="dst-m"></div></div>';
+      +'<div class="dst-thin">'+_tt('dist_thin')+'</div></div>';
   }
   if(DISTDIM==='total'){
     if(sc.blk){
@@ -1427,9 +1438,9 @@ function _distRows(e,kind,colors,sc){
   return out.map(function(r){
     if(!r.blk||r.blk.n<MIN)
       return '<div class="dst-row'+r.cls+'"><div class="dst-k" title="'+r.k+'">'+r.k+'</div>'
-        +'<div class="dst-thin">'+_tt('dist_thin')+' (n='+_distNum((r.blk&&r.blk.n)||0)+')</div><div class="dst-m"></div></div>';
-    return '<div class="dst-row'+r.cls+'"><div class="dst-k" title="'+r.k+'">'+r.k+'</div>'
-      +_distBar(r.blk,kind,colors)+_distMeta(r.blk,kind)+'</div>';
+        +'<div class="dst-thin">'+_tt('dist_thin')+' (n='+_distNum((r.blk&&r.blk.n)||0)+')</div></div>';
+    return '<div class="dst-row'+r.cls+'"><div class="dst-k" title="'+r.k+' — '+_distTip(r.blk,kind)+'">'+r.k+'</div>'
+      +_distBar(r.blk,kind,colors)+'</div>';
   }).join('');
 }
 function _distLegend(kind,colors){
@@ -1469,6 +1480,7 @@ function renderDist(){
   $('distLeadLg').innerHTML=_distLegend('lead',CD);
   host.innerHTML=_distRows(e,'los',CL,sc);
   $('distLead').innerHTML=_distRows(e,'lead',CD,sc);
+  if(window.requestAnimationFrame)requestAnimationFrame(_distFit); else setTimeout(_distFit,0);
   var w=$('distWarn');
   if(w){
     var msg='';
