@@ -782,12 +782,16 @@ function applyRegionView(){
   const kp=$('kpis'); if(kp) kp.style.display=onR?'none':'';
   const ins=$('insights'); if(ins) ins.style.display=onR?'none':'';
   if(onR && $('keyChange')) $('keyChange').style.display='none';
-  ['q','m','w','wow','p','s','mg'].forEach(v=>{const e=$('view-'+v); if(e) e.classList.toggle('hide', onR || v!==at);});
+  ['q','m','w','wow','p','s','mg','nat','dist'].forEach(v=>{const e=$('view-'+v); if(e) e.classList.toggle('hide', onR || v!==at);});
   if(!onR && at==='w'){ showGrain(); } if($('grainSeg')) $('grainSeg').style.display=(!onR && at==='w')?'inline-flex':'none';
-  if($('globalBreakdown')) $('globalBreakdown').classList.toggle('hide', onR || at==='wow' || at==='p' || at==='s' || at==='mg');
+  // 국적·분포 탭은 자체 화면만 보여준다 (아래 Contract Type/호텔/체인/지역/채널 블록은 숨김)
+  if($('globalBreakdown')) $('globalBreakdown').classList.toggle('hide', onR || at==='wow' || at==='p' || at==='s' || at==='mg' || at==='nat' || at==='dist');
   const vr=$('view-r'); if(vr) vr.classList.toggle('hide', !onR);
   if($('regionSelWrap')) $('regionSelWrap').style.display='none';
   if(onR) renderRegion(CURRGN);
+  // 위에서 다시 보이게 된 경우를 위해 내용도 갱신한다
+  if(!onR && at==='nat' && typeof renderNat==='function') renderNat();
+  if(!onR && at==='dist' && typeof renderDist==='function') renderDist();
 }
 function buildPickupIns(){
   try{
