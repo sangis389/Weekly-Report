@@ -586,6 +586,8 @@ body.dark .tcsv{background:#16223a;border-color:#243049}
       <div class="dst-bar">
         <span class="dst-lb" data-i18n="dist_dim">비교 기준</span><span id="distScope"></span>
         <select id="distDim" class="dst-sel"></select>
+        <span class="dst-lb" data-i18n="dist_year">연도</span>
+        <select id="distYear" class="dst-sel"></select>
         <button class="tcsv" id="distCsv">⬇ CSV</button>
         <span id="distCut" class="muted" style="font-size:12px;margin-left:auto"></span>
       </div>
@@ -666,7 +668,7 @@ const TT={
  dist_title:{ko:'⏱️ 투숙기간(LOS) · 예약 리드타임 분포',en:'⏱️ Length of Stay & Lead Time Distribution',vi:'⏱️ Phân bố thời gian lưu trú & thời gian đặt trước'},
  dist_sub:{ko:'평균 하나로는 예약 형태를 알 수 없습니다. 구간별로 나눠 실제 분포를 봅니다.',en:'A single average hides how bookings actually behave. This breaks the same data into buckets.',vi:'Chỉ một giá trị trung bình không cho thấy hành vi đặt phòng thực tế. Đây là phân bố theo khoảng.'},
  dist_dim:{ko:'비교 기준',en:'Compare by',vi:'So sánh theo'},
- dist_d_total:{ko:'전체 (전년 비교)',en:'Total (vs last year)',vi:'Tổng (so cùng kỳ)'},
+ dist_d_total:{ko:'전체',en:'Total',vi:'Tổng'},
  dist_d_region:{ko:'지역별',en:'By region',vi:'Theo khu vực'},
  dist_d_pic:{ko:'담당자별',en:'By account owner',vi:'Theo người phụ trách'},
  dist_d_nat:{ko:'고객 국적별',en:'By guest nationality',vi:'Theo quốc tịch khách'},
@@ -677,6 +679,7 @@ const TT={
  dist_prev:{ko:'전년 동기',en:'Same period LY',vi:'Cùng kỳ năm trước'},
  dist_thin:{ko:'표본 부족',en:'insufficient sample',vi:'mẫu quá nhỏ'},
  dist_cut:{ko:'집계 기준일',en:'Data as of',vi:'Dữ liệu tính đến'},
+ dist_year:{ko:'연도',en:'Year',vi:'Năm'},
  dist_more:{ko:'지역 더 보기 ▾',en:'Show more regions ▾',vi:'Xem thêm khu vực ▾'},
  dist_less:{ko:'접기 ▴',en:'Show less ▴',vi:'Thu gọn ▴'},
  dist_mean:{ko:'평균',en:'avg',vi:'TB'},
@@ -1360,7 +1363,7 @@ function _natCtryLab(c){
 }
 // ── LOS · Lead Time 분포 ────────────────────────────────────
 // 사이드바(PIC / Region)가 범위를 정하고, 아래 드롭다운은 "무엇으로 쪼갤지"만 정한다.
-var DISTDIM='total', DISTMORE=false, DISTTRUNC=false;
+var DISTDIM='total', DISTMORE=false, DISTTRUNC=false, DISTYEAR='both';
 function _distLbl(kind){
   var M=window.OMH_DIST_META||{}; var o=(M[kind]&&M[kind].labels)||{};
   return o[LANG]||o.ko||[];
@@ -1453,14 +1456,18 @@ function _distRows(e,kind,colors,sc){
     return '<div class="dst-row dst-tot"><div class="dst-k" title="'+sc.label+'">'+sc.label+'</div>'
       +'<div class="dst-thin">'+_tt('dist_thin')+'</div></div>';
   }
-  var LY=(LANG==='ko')?"'25":(LANG==='vi')?"'25":"'25";
+  var YR=M.year||0, LY="'"+String(YR-1).slice(2);
+  var showC=(DISTYEAR!=='prev'), showP=(DISTYEAR!=='cur');
   if(DISTDIM==='total'){
     if(sc.blk){
       out.push({k:sc.label,blk:sc.blk[kind],cls:' dst-tot'});
     }else{
-      out.push({k:_tt('dist_d_total'),blk:e.total[kind],cls:' dst-tot'});
-      if(e.prev&&e.prev[kind]&&e.prev[kind].n)
-        out.push({k:LY,blk:e.prev[kind],ghost:true});
+      if(showC)out.push({k:showP?_tt('dist_d_total'):String(YR),blk:e.total[kind],cls:' dst-tot'});
+      if(showP&&e.prev&&e.prev[kind]&&e.prev[kind].n){
+        // 전년만 볼 때는 참고행이 아니라 본행으로 그린다
+        if(showC)out.push({k:LY,blk:e.prev[kind],ghost:true});
+        else out.push({k:String(YR-1),blk:e.prev[kind],cls:' dst-tot'});
+      }
     }
   }else{
     var rows=e[DISTDIM]||[];
@@ -1484,10 +1491,11 @@ function _distRows(e,kind,colors,sc){
     var pb=(e.prevBy&&e.prevBy[DISTDIM])||null;
     var scoped=(DISTDIM==='region'&&pic!=='ALL')||(DISTDIM==='pic'&&rgn!=='ALL');
     rows.forEach(function(r){
-      out.push({k:_distKey(r.k),blk:r[kind],cls:''});
-      if(pb&&!scoped){
-        var p=pb[r.k];
-        if(p&&p[kind]&&p[kind].n) out.push({k:LY,blk:p[kind],ghost:true});
+      var p=(pb&&!scoped)?pb[r.k]:null;
+      if(showC)out.push({k:_distKey(r.k),blk:r[kind],cls:''});
+      if(showP&&p&&p[kind]&&p[kind].n){
+        if(showC)out.push({k:LY,blk:p[kind],ghost:true});
+        else out.push({k:_distKey(r.k),blk:p[kind],cls:''});
       }
     });
   }
@@ -1520,6 +1528,13 @@ function _distFillDim(dims){
   sel.innerHTML=opts.map(function(o){
     return '<option value="'+o[0]+'"'+(o[0]===DISTDIM?' selected':'')+'>'+_tt(o[1])+'</option>';}).join('');
 }
+function _distFillYear(){
+  var sel=$('distYear'); if(!sel)return;
+  var M=window.OMH_DIST_META||{}, y=M.year||0;
+  var o=[['both',y+' vs '+(y-1)],['cur',String(y)],['prev',String(y-1)]];
+  sel.innerHTML=o.map(function(x){
+    return '<option value="'+x[0]+'"'+(x[0]===DISTYEAR?' selected':'')+'>'+x[1]+'</option>';}).join('');
+}
 function renderDist(){
   var host=$('distLos'); if(!host)return;
   var M=window.OMH_DIST_META||{};
@@ -1535,6 +1550,7 @@ function renderDist(){
     if($('distScope'))$('distScope').innerHTML='';return;}
   var sc=_distScope(e);
   _distFillDim(sc.dims);
+  _distFillYear();
   if($('distScope'))$('distScope').innerHTML=sc.label?('<span class="dst-scope">'+sc.label+'</span>'):'';
   var CL=_distPal('los'), CD=_distPal('lead');
   $('distLosLg').innerHTML=_distLegend('los',CL);
@@ -1587,6 +1603,7 @@ function _distCsv(){
 }
 document.addEventListener('change',function(ev){
   if(ev.target&&ev.target.id==='distDim'){DISTDIM=ev.target.value;renderDist();}
+  else if(ev.target&&ev.target.id==='distYear'){DISTYEAR=ev.target.value;renderDist();}
 });
 document.addEventListener('click',function(ev){
   if(ev.target&&ev.target.id==='distCsv'){_distCsv();return;}
