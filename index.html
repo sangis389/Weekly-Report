@@ -1446,9 +1446,11 @@ function _distScope(e){
     var c=(e.cross||{})[pic+'|'+rgn];
     return {blk:c||null,label:pic+' · '+rgn,dims:['nat'],partial:!c};
   }
-  if(pic!=='ALL')return {blk:find(e.pic,pic),label:pic,dims:['region','nat'],partial:false};
-  if(rgn!=='ALL')return {blk:find(e.region,rgn),label:rgn,dims:['pic','nat'],partial:false};
-  return {blk:null,label:'',dims:['region','pic','nat'],partial:false};
+  // 전년 동기는 prevBy[dim][key] 에 있다 — 사이드바로 좁혀도 같이 그린다
+  var pv=function(dim,k){var m=(e.prevBy&&e.prevBy[dim])||null;return (m&&m[k])||null;};
+  if(pic!=='ALL')return {blk:find(e.pic,pic),prev:pv('pic',pic),label:pic,dims:['region','nat'],partial:false};
+  if(rgn!=='ALL')return {blk:find(e.region,rgn),prev:pv('region',rgn),label:rgn,dims:['pic','nat'],partial:false};
+  return {blk:null,prev:null,label:'',dims:['region','pic','nat'],partial:false};
 }
 function _distRows(e,kind,colors,sc){
   var M=window.OMH_DIST_META||{}, MIN=M.minSample||30, out=[];
@@ -1459,8 +1461,16 @@ function _distRows(e,kind,colors,sc){
   var YR=M.year||0, LY="'"+String(YR-1).slice(2);
   var showC=(DISTYEAR!=='prev'), showP=(DISTYEAR!=='cur');
   if(DISTDIM==='total'){
-    if(sc.blk){
-      out.push({k:sc.label,blk:sc.blk[kind],cls:' dst-tot'});
+    if(sc.blk||sc.prev){
+      // 지역·담당자를 고른 경우에도 전년 동기를 함께 그린다
+      var _sp=sc.prev&&sc.prev[kind]&&sc.prev[kind].n;
+      if(showC&&sc.blk)out.push({k:sc.label,blk:sc.blk[kind],cls:' dst-tot'});
+      if(showP&&_sp){
+        if(showC&&sc.blk)out.push({k:LY,blk:sc.prev[kind],ghost:true});
+        else out.push({k:sc.label+' '+String(YR-1),blk:sc.prev[kind],cls:' dst-tot'});
+      }
+      if(showP&&!_sp&&showC&&sc.blk)
+        out.push({k:LY,blk:null,cls:' dst-ghostna'});
     }else{
       if(showC)out.push({k:showP?_tt('dist_d_total'):String(YR),blk:e.total[kind],cls:' dst-tot'});
       if(showP&&e.prev&&e.prev[kind]&&e.prev[kind].n){
