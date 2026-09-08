@@ -1900,23 +1900,35 @@ function renderPickup(){
    전년 비교는 「작년 같은 날짜까지 확보돼 있던 올해 물량」과 맞춘 like-for-like 이다. */
 function renderForward(){
   var card=$('fwdCard'); if(!card)return;
-  var fw=CUR&&CUR.forward;
+  // 선행예약 블록은 국가 데이터셋에만 있다. 좌측에서 지역·담당자를 고르면 CUR 이
+  // 지역/담당자 데이터셋으로 바뀌므로, 여기서는 항상 국가 데이터셋을 직접 본다.
+  var _cd=(typeof DATA!=='undefined'&&DATA.datasets&&DATA.datasets[CURY])?DATA.datasets[CURY]:null;
+  var fw=(_cd&&_cd.forward)||(CUR&&CUR.forward);
   if(!fw||!fw.months||!fw.months.length){card.style.display='none';return;}
   card.style.display='';
   var EN=(LANG==='en'), VI=(LANG==='vi');
   var T=function(k,e,v){return VI?(v!=null?v:e):(EN?e:k);};
   var yr=(+CURY)+1;
-  // 좌측 사이드바 지역 선택(CURRGN)을 그대로 따른다 — 카드 안에 별도 지역 목록을 두지 않는다
+  // 좌측 사이드바의 지역·담당자 선택을 그대로 따른다 — 카드 안에 별도 목록을 두지 않는다
   var _rg=(typeof CURRGN!=='undefined')?CURRGN:'ALL';
+  var _pc=(typeof CURPIC!=='undefined')?CURPIC:'ALL';
   if($('fwdTitle'))$('fwdTitle').textContent=T(yr+'년 이후 선행예약',
       'Forward bookings — '+yr+' and beyond','Đặt trước từ '+yr);
-  if($('fwdPill'))$('fwdPill').textContent=(_rg==='ALL'?L('pic_all'):_rg);
-  var ms=fw.months;
-  if(_rg!=='ALL')ms=(fw.by_region&&fw.by_region[_rg])||[];
+  var _scope=(_rg!=='ALL'?_rg:'')+((_rg!=='ALL'&&_pc!=='ALL')?' · ':'')+(_pc!=='ALL'?_pc:'');
+  if($('fwdPill'))$('fwdPill').textContent=_scope||L('pic_all');
+  var ms=fw.months, _xnote='';
+  if(_rg!=='ALL'){
+    ms=(fw.by_region&&fw.by_region[_rg])||[];
+    if(_pc!=='ALL')_xnote=T('  ※ 선행예약은 지역 기준으로만 좁혀집니다(담당자 교차 없음).',
+      '  * Forward is scoped by region only (no PIC cross).','  * Chỉ lọc theo khu vực.');
+  } else if(_pc!=='ALL'){
+    ms=(fw.by_pic&&fw.by_pic[_pc])||[];
+  }
   if(!ms.length){
     if($('fwdKpi'))$('fwdKpi').innerHTML='';
+    var _sc2=_scope||L('pic_all');
     if($('fwdTable'))$('fwdTable').innerHTML='<tbody><tr><td class="muted" style="padding:14px">'
-      +T(_rg+' — '+yr+'년 이후 선행예약 없음','No forward bookings for '+_rg,'Không có đặt trước cho '+_rg)+'</td></tr></tbody>';
+      +T(_sc2+' — '+yr+'년 이후 선행예약 없음','No forward bookings for '+_sc2,'Không có đặt trước cho '+_sc2)+'</td></tr></tbody>';
     if($('fwdNote'))$('fwdNote').textContent='';
     if(CH['fwdMO']){CH['fwdMO'].destroy();delete CH['fwdMO'];}
     return;
@@ -1952,7 +1964,7 @@ function renderForward(){
   if($('fwdNote'))$('fwdNote').textContent=T(
     '체크아웃 기준 · 취소 제외. 이 물량은 '+CURY+'년 집계·YoY·WoW 에 포함되지 않습니다. 전년 비교는 '+fw.prev_cut+' 까지 확보돼 있던 '+CURY+'년 물량과 맞춘 값입니다 (현재 컷 '+fw.cut+').',
     'Check-out basis, cancellations excluded. Not included in '+CURY+' totals/YoY/WoW. The prior-year column is the '+CURY+' volume secured as of '+fw.prev_cut+' (current cut '+fw.cut+').',
-    'Theo ngày trả phòng, đã loại hủy. Không tính vào tổng '+CURY+'. Cột năm trước là lượng '+CURY+' có đến '+fw.prev_cut+'.');
+    'Theo ngày trả phòng, đã loại hủy. Không tính vào tổng '+CURY+'. Cột năm trước là lượng '+CURY+' có đến '+fw.prev_cut+'.')+_xnote;
   var lb=ms.map(function(m){return m.month;});
   if(document.getElementById('fwdChart'))mk('fwdMO','fwdChart',{data:{labels:lb,datasets:[
       {type:'bar',label:'R/N '+yr,data:ms.map(function(m){return m.rn;}),backgroundColor:'rgba(46,110,142,.72)',borderRadius:4,order:2},
