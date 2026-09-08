@@ -200,6 +200,12 @@ body.dark .dst-sel{background:#111c30;border-color:#243049}
 .dst-scope{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(255,96,0,.12);color:var(--orange);margin-left:6px}
 .dst-warn{margin-top:10px;padding:8px 11px;border-radius:8px;background:rgba(255,96,0,.09);border:1px solid rgba(255,96,0,.25);font-size:12.5px;line-height:1.6}
 .dst-lg{display:flex;flex-wrap:wrap;gap:9px;margin:2px 0 12px;font-size:11.5px;color:var(--muted)}
+/* 호텔 드릴다운 안의 LOS·리드타임 분포 */
+.hi-dist{padding:4px 2px 2px}
+.hi-dist .dst-h{font-size:12.5px;font-weight:700;color:var(--navy,#1F3864);margin:2px 0 6px}
+.hi-dist .dst-row{grid-template-columns:180px 1fr}
+.hi-dist .dst-gh{grid-template-columns:180px 1fr}
+body.dark .hi-dist .dst-h{color:#9DB8DD}
 .dst-lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
 .dst-wrap{display:flex;flex-direction:column;gap:5px}
 .dst-row{display:grid;grid-template-columns:132px 1fr;align-items:center;gap:12px}
@@ -1273,13 +1279,15 @@ function _hiRenderDetail(){
     });
     if(!rts.length)body='<tr><td colspan="10" class="muted">'+T('데이터 없음','No data','Không có dữ liệu')+'</td></tr>';
   }
-  var tabs='<div class="hi-tabs"><button class="hi-tg'+(_hiView==='rt'?' active':'')+'" data-v="rt">'+T('룸타입·프로모션 상세','Room type · promotion','Loại phòng · Khuyến mãi')+'</button><button class="hi-tg'+(_hiView==='mon'?' active':'')+'" data-v="mon">'+T('월별 추세','Monthly trend','Xu hướng tháng')+'</button><button class="hi-tg'+(_hiView==='insight'?' active':'')+'" data-v="insight">'+T('협상·제안','Insights','Phân tích')+'</button></div>';
+  var tabs='<div class="hi-tabs"><button class="hi-tg'+(_hiView==='rt'?' active':'')+'" data-v="rt">'+T('룸타입·프로모션 상세','Room type · promotion','Loại phòng · Khuyến mãi')+'</button><button class="hi-tg'+(_hiView==='mon'?' active':'')+'" data-v="mon">'+T('월별 추세','Monthly trend','Xu hướng tháng')+'</button><button class="hi-tg'+(_hiView==='insight'?' active':'')+'" data-v="insight">'+T('협상·제안','Insights','Phân tích')+'</button><button class="hi-tg'+(_hiView==='dist'?' active':'')+'" data-v="dist">'+T('LOS · 리드타임','LOS · Lead time','LOS · Lead time')+'</button></div>';
   var hint=(_hiView==='rt')?'<div class="hi-hint">'+T('룸타입 → 월 → 프로모션 순으로 클릭하여 펼쳐보세요','Room type → month → promotion. Click rows to expand','Loại phòng → tháng → khuyến mãi. Nhấp để mở rộng')+'</div>':'';
   var html;
   if(_hiView==='insight'){
     var recs=_hiBench(h,T).concat(_hiInsights(h,EN,T));
     var rb=recs.length?recs.map(function(r){return '<div class="hi-rec '+r[0]+'"><h5>'+r[1]+'</h5><p>'+r[2]+'</p></div>';}).join(''):'<div class="muted" style="padding:8px 2px">'+T('분석할 데이터가 부족합니다.','Not enough data to analyze.','Không đủ dữ liệu để phân tích.')+'</div>';
     html='<div class="hk-row">'+kphtml+'</div>'+_hiNatBar(h.name,T)+tabs+'<div class="hi-intro">'+T('아래 분석은 이 호텔의 부킹·마진·프로모션·시즌 데이터를 기반으로 한 협상/제안 참고용입니다.','Negotiation/proposal cues derived from this hotel booking, margin, promotion and seasonality data.','Các gợi ý đàm phán/đề xuất dưới đây dựa trên dữ liệu đặt phòng, margin, khuyến mãi và mùa vụ của khách sạn này.')+'</div><div class="hi-recs">'+rb+'</div>';
+  } else if(_hiView==='dist'){
+    html='<div class="hk-row">'+kphtml+'</div>'+_hiNatBar(h.name,T)+tabs+_hiDistHTML(h,T);
   } else {
     var viz=(_hiView==='rt')?_hiVizRT(h,T):_hiVizMon(h,T);
     html='<div class="hk-row">'+kphtml+'</div>'+_hiNatBar(h.name,T)+tabs+viz+hint+'<div class="scroll"><table class="mg-table"><thead><tr>'+hd+'</tr></thead><tbody>'+body+'</tbody></table></div>';
@@ -1287,6 +1295,41 @@ function _hiRenderDetail(){
   document.getElementById('himBody').innerHTML=html;
   if(_hiView==='rt'){_hiDrawRT(h);_hiDrawPromo(h,T);_hiPaint(h);}
   else if(_hiView==='mon'){_hiDrawMon(h);_hiPaint(h);}
+  else if(_hiView==='dist'&&window.requestAnimationFrame)requestAnimationFrame(_distFit);
+}
+/* 호텔 단위 LOS·리드타임 구간 분포. LOS·Lead Time 탭과 같은 정의·같은 막대를 쓴다.
+   비교 기준선으로 그 호텔이 속한 지역의 분포를 회색 고스트 바로 함께 그린다. */
+function _hiDistHTML(h,T){
+  var dd=h&&h.dist;
+  if(!dd||(!dd.los&&!dd.lead))
+    return '<div class="muted" style="padding:14px 2px">'+T('이 호텔은 구간 분포를 낼 표본이 부족합니다.',
+      'Not enough sample to show a distribution for this hotel.','Không đủ mẫu để hiển thị phân bố.')+'</div>';
+  var M=window.OMH_DIST_META||{}, MIN=M.minSample||30;
+  var CL=_distPal('los'), CD=_distPal('lead');
+  // 지역 기준선 — OMH_DIST 에서 이 호텔의 지역을 찾는다
+  var reg=null;
+  try{
+    var de=(window.OMH_DIST&&window.OMH_DIST[BASIS]||{})[CURCTRY];
+    if(de&&h.region){for(var i=0;i<(de.region||[]).length;i++)if(de.region[i].k===h.region){reg=de.region[i];break;}}
+  }catch(e){}
+  function block(kind,colors,title){
+    var b=dd[kind];
+    var out='<div class="dst-h">'+title+'</div><div class="dst-lg">'+_distLegend(kind,colors)+'</div>';
+    if(!b||b.n<MIN)
+      return out+'<div class="dst-row dst-tot"><div class="dst-k">'+h.name+'</div><div class="dst-thin">'
+        +_tt('dist_thin')+' (n='+_distNum((b&&b.n)||0)+')</div></div>';
+    out+='<div class="dst-row dst-tot"><div class="dst-k" title="'+_distTip(b,kind)+'">'+h.name+'</div>'+_distBar(b,kind,colors)+'</div>';
+    if(reg&&reg[kind]&&reg[kind].n>=MIN)
+      out+=_distGhost(reg[kind],kind,colors,h.region);
+    return out;
+  }
+  var note=T('구간 정의와 이상치 처리는 「LOS · 리드타임」 탭과 동일합니다. 리드타임 = 체크인일 − 부킹일. 회색 막대는 이 호텔이 속한 지역 평균입니다.',
+    'Buckets and outlier handling match the LOS · Lead Time tab. Lead time = check-in minus booking date. The grey bar is the destination average.',
+    'Phân nhóm giống tab LOS · Lead Time. Lead time = ngày nhận phòng trừ ngày đặt. Thanh xám là trung bình khu vực.');
+  return '<div class="hi-dist">'+block('los',CL,T('숙박일수 분포','Length of stay','Số đêm lưu trú'))
+    +'<div style="height:14px"></div>'
+    +block('lead',CD,T('예약 리드타임 분포','Booking lead time','Thời gian đặt trước'))
+    +'<div class="muted" style="font-size:11px;margin-top:10px;line-height:1.5">'+note+'</div></div>';
 }
 document.addEventListener('click',function(e){
   var tg=e.target&&e.target.closest?e.target.closest('.hi-tg'):null;
