@@ -5,15 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>OMH Global SCM | 호텔 예약 현황 대시보드</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="data_booking.js?v=20260907"></script>
-<script src="data_booking_b.js?v=20260907"></script>
-<script src="data_booking_c.js?v=20260907"></script>
-<script src="data_checkout.js?v=20260907"></script>
-<script src="data_checkout_b.js?v=20260907"></script>
-<script src="data_checkout_c.js?v=20260907"></script>
-<script src="aux_data.js?v=20260907"></script>
-<script src="nat_data.js?v=20260907"></script>
-<script src="dist_data.js?v=20260907"></script>
+<script src="data_booking.js?v=20260908"></script>
+<script src="data_booking_b.js?v=20260908"></script>
+<script src="data_booking_c.js?v=20260908"></script>
+<script src="data_checkout.js?v=20260908"></script>
+<script src="data_checkout_b.js?v=20260908"></script>
+<script src="data_checkout_c.js?v=20260908"></script>
+<script src="aux_data.js?v=20260908"></script>
+<script src="nat_data.js?v=20260908"></script>
+<script src="dist_data.js?v=20260908"></script>
 <style>
 :root{--ink:#1F1A17;--ink2:#383838;--muted:#8A8580;--line:#EDE7DF;--panel:#fff;--accent:#FF6000;--accent-deep:#D14E00;--accent2:#009538;--green-deep:#007A2F;--orange-soft:#FFF1E6;
   --pos:#009538;--neg:#dc2626;--chip:#FFF1E6;--page:#FFFCF8}
@@ -525,6 +525,12 @@ body.dark .tcsv{background:#16223a;border-color:#243049}
       <div class="chart-box tall"><canvas id="paceChart"></canvas></div>
       <div id="paceNote" class="muted" style="font-size:11px;margin-top:6px;line-height:1.5"></div></div>
     <div class="card"><h3><span data-i18n="p_matrix">투숙월 × 부킹월 매트릭스</span> <span class="pill" id="pickRgnPill"></span></h3><div class="scroll"><table id="pickTable" class="r-num"></table></div><div id="pickNote" class="muted" style="font-size:11px;margin-top:7px;line-height:1.5"></div></div>
+    <div class="card" id="fwdCard" style="display:none">
+      <h3><span id="fwdTitle">내년 이후 선행예약</span> <span class="pill" id="fwdPill"></span></h3>
+      <div id="fwdKpi" class="pm-row" style="margin-bottom:8px"></div>
+      <div class="chart-box"><canvas id="fwdChart"></canvas></div>
+      <div class="scroll" style="margin-top:10px"><table id="fwdTable" class="r-num"></table></div>
+      <div id="fwdNote" class="muted" style="font-size:11px;margin-top:7px;line-height:1.5"></div></div>
   </div>
 
   <div id="view-s" class="hide">
@@ -1887,6 +1893,77 @@ function renderPickup(){
   const mxc=Math.max(1,...(data.rows||[]).flatMap(r=>r.cells));
   let _hasFut=false;(data.rows||[]).forEach(r=>{const sy=2000+parseInt(String(r.stay).slice(-2),10);const fut=sy>(+CURY);if(fut)_hasFut=true;const pv=(r.ptotal==null)?null:r.ptotal;let yc='<td class="muted">–</td>';if(fut){yc='<td class="muted" style="font-size:10px;white-space:nowrap">'+L('pace_pre')+'</td>';}else if(pv!=null&&pv!==0){const g=(r.total-pv)/pv*100;const c=g>=0?'pos':'neg';yc=`<td class="${c}">${g>=0?'▲':'▼'} ${Math.abs(g).toFixed(1)}%</td>`;}ph+=`<tr><td>${r.stay}</td>`+r.cells.map(c=>`<td style="background:rgba(255,96,0,${c?(c/mxc*0.8).toFixed(2):0})">${c?f0(c):''}</td>`).join('')+`<td><b>${f0(r.total)}</b></td><td>${pv==null?'<span class="muted">–</span>':f0(pv)}</td>`+yc+`</tr>`;});
   ph+='</tbody>';$('pickTable').innerHTML=ph;if($('pickNote'))$('pickNote').textContent=_hasFut?L('pace_prenote'):'';
+  renderForward();
+}
+/* ── 내년 이후 체크아웃(선행예약) — 전사 · 지역 · 담당자 ─────────────────────
+   체크아웃 기준에서만 존재한다. 당해년도 집계·YoY 에는 들어가지 않는 별도 블록이며,
+   전년 비교는 「작년 같은 날짜까지 확보돼 있던 올해 물량」과 맞춘 like-for-like 이다. */
+function renderForward(){
+  var card=$('fwdCard'); if(!card)return;
+  var fw=CUR&&CUR.forward;
+  if(!fw||!fw.months||!fw.months.length){card.style.display='none';return;}
+  card.style.display='';
+  var EN=(LANG==='en'), VI=(LANG==='vi');
+  var T=function(k,e,v){return VI?(v!=null?v:e):(EN?e:k);};
+  var yr=(+CURY)+1;
+  if($('fwdTitle'))$('fwdTitle').textContent=T(yr+'년 이후 선행예약',
+      'Forward bookings — '+yr+' and beyond','Đặt trước từ '+yr);
+  if($('fwdPill'))$('fwdPill').textContent=(PICKRGN==='ALL'?L('pic_all'):PICKRGN);
+  var ms=fw.months;
+  if(PICKRGN!=='ALL'&&fw.by_region&&fw.by_region[PICKRGN])ms=fw.by_region[PICKRGN];
+  var sum=function(k){return ms.reduce(function(s,m){return s+(+m[k]||0);},0);};
+  var prn=ms.reduce(function(s,m){return s+(+m.prn||0);},0);
+  var rn=sum('rn'), bk=sum('bookings'), ttv=sum('ttv');
+  var g=(prn>0)?((rn-prn)/prn*100):null;
+  var kpi=[[T('예약','Bookings','Đặt'),f0(bk)],['R/N',f0(rn)],['TTV',vc(ttv)],
+    [T('전년 동시점 R/N','Same point last yr R/N','R/N cùng thời điểm'),prn?f0(prn):'–'],
+    [T('R/N 전년비','R/N vs last yr','R/N so năm trước'),
+      g==null?'–':'<span class="'+(g>=0?'pos':'neg')+'">'+(g>=0?'▲':'▼')+' '+Math.abs(g).toFixed(0)+'%</span>']];
+  if($('fwdKpi'))$('fwdKpi').innerHTML=kpi.map(function(k){
+    return '<div class="pm-chip"><div class="pm-lab">'+k[0]+'</div><div class="pm-delta">'+k[1]+'</div></div>';}).join('');
+  var th='<thead><tr><th>'+T('체크아웃 월','Check-out month','Tháng trả phòng')+'</th><th>'+T('예약','Bkg','Đặt')
+    +'</th><th>R/N</th><th>TTV</th><th>'+T('마진','Margin','Margin')+'%</th><th>ADR</th><th>LOS</th><th>'
+    +T('전년 R/N','Prev R/N','R/N trước')+'</th><th>YoY</th></tr></thead><tbody>';
+  var mx=Math.max.apply(null,ms.map(function(m){return +m.rn||0;}).concat([1]));
+  ms.forEach(function(m){
+    var p=+m.prn||0, gg=(p>0)?((m.rn-p)/p*100):null;
+    th+='<tr><td>'+m.month+'</td><td>'+f0(m.bookings)+'</td>'
+      +'<td style="background:rgba(46,110,142,'+((m.rn/mx)*0.55).toFixed(2)+')"><b>'+f0(m.rn)+'</b></td>'
+      +'<td>'+vc(m.ttv)+'</td><td>'+(Math.round((+m.margin)*10)/10)+'%</td><td>'+vc(m.adr)+'</td>'
+      +'<td>'+(+m.los).toFixed(2)+'</td><td>'+(p?f0(p):'<span class="muted">–</span>')+'</td>'
+      +(gg==null?'<td class="muted">–</td>':'<td class="'+(gg>=0?'pos':'neg')+'">'+(gg>=0?'▲':'▼')+' '+Math.abs(gg).toFixed(0)+'%</td>')
+      +'</tr>';});
+  // 지역 전체 보기일 때만 지역별 요약을 덧붙인다
+  if(PICKRGN==='ALL'&&fw.by_region){
+    var rs=Object.keys(fw.by_region).map(function(k){
+      var v=fw.by_region[k];
+      return {k:k,rn:v.reduce(function(s,x){return s+(+x.rn||0);},0),
+              bk:v.reduce(function(s,x){return s+(+x.bookings||0);},0),
+              ttv:v.reduce(function(s,x){return s+(+x.ttv||0);},0),
+              p:v.reduce(function(s,x){return s+(+x.prn||0);},0)};}).sort(function(a,b){return b.rn-a.rn;});
+    th+='<tr><td colspan="9" style="background:var(--card2,#f3f5f8);font-weight:700;font-size:11px">'
+      +T('지역별','By region','Theo khu vực')+'</td></tr>';
+    rs.forEach(function(r){
+      var gg=(r.p>0)?((r.rn-r.p)/r.p*100):null;
+      th+='<tr><td>'+r.k+'</td><td>'+f0(r.bk)+'</td>'
+        +'<td style="background:rgba(46,110,142,'+((r.rn/(rs[0].rn||1))*0.45).toFixed(2)+')">'+f0(r.rn)+'</td>'
+        +'<td>'+vc(r.ttv)+'</td><td class="muted">–</td><td class="muted">–</td><td class="muted">–</td>'
+        +'<td>'+(r.p?f0(r.p):'<span class="muted">–</span>')+'</td>'
+        +(gg==null?'<td class="muted">–</td>':'<td class="'+(gg>=0?'pos':'neg')+'">'+(gg>=0?'▲':'▼')+' '+Math.abs(gg).toFixed(0)+'%</td>')
+        +'</tr>';});
+  }
+  th+='</tbody>';
+  if($('fwdTable'))$('fwdTable').innerHTML=th;
+  if($('fwdNote'))$('fwdNote').textContent=T(
+    '체크아웃 기준 · 취소 제외. 이 물량은 '+CURY+'년 집계·YoY·WoW 에 포함되지 않습니다. 전년 비교는 '+fw.prev_cut+' 까지 확보돼 있던 '+CURY+'년 물량과 맞춘 값입니다 (현재 컷 '+fw.cut+').',
+    'Check-out basis, cancellations excluded. Not included in '+CURY+' totals/YoY/WoW. The prior-year column is the '+CURY+' volume secured as of '+fw.prev_cut+' (current cut '+fw.cut+').',
+    'Theo ngày trả phòng, đã loại hủy. Không tính vào tổng '+CURY+'. Cột năm trước là lượng '+CURY+' có đến '+fw.prev_cut+'.');
+  var lb=ms.map(function(m){return m.month;});
+  if(document.getElementById('fwdChart'))mk('fwdMO','fwdChart',{data:{labels:lb,datasets:[
+      {type:'bar',label:'R/N '+yr,data:ms.map(function(m){return m.rn;}),backgroundColor:'rgba(46,110,142,.72)',borderRadius:4,order:2},
+      {type:'bar',label:T('전년 동시점','Same point last yr','Cùng kỳ trước'),data:ms.map(function(m){return +m.prn||0;}),backgroundColor:'rgba(150,160,175,.45)',borderRadius:4,order:3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:10}}}},
+      scales:{y:{ticks:{callback:function(v){return f0(v);},font:{size:10}}},x:{ticks:{font:{size:10}}}}}});
 }
 function moversGroup(title,items,kind){
   let body;
