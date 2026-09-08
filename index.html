@@ -1906,11 +1906,21 @@ function renderForward(){
   var EN=(LANG==='en'), VI=(LANG==='vi');
   var T=function(k,e,v){return VI?(v!=null?v:e):(EN?e:k);};
   var yr=(+CURY)+1;
+  // 좌측 사이드바 지역 선택(CURRGN)을 그대로 따른다 — 카드 안에 별도 지역 목록을 두지 않는다
+  var _rg=(typeof CURRGN!=='undefined')?CURRGN:'ALL';
   if($('fwdTitle'))$('fwdTitle').textContent=T(yr+'년 이후 선행예약',
       'Forward bookings — '+yr+' and beyond','Đặt trước từ '+yr);
-  if($('fwdPill'))$('fwdPill').textContent=(PICKRGN==='ALL'?L('pic_all'):PICKRGN);
+  if($('fwdPill'))$('fwdPill').textContent=(_rg==='ALL'?L('pic_all'):_rg);
   var ms=fw.months;
-  if(PICKRGN!=='ALL'&&fw.by_region&&fw.by_region[PICKRGN])ms=fw.by_region[PICKRGN];
+  if(_rg!=='ALL')ms=(fw.by_region&&fw.by_region[_rg])||[];
+  if(!ms.length){
+    if($('fwdKpi'))$('fwdKpi').innerHTML='';
+    if($('fwdTable'))$('fwdTable').innerHTML='<tbody><tr><td class="muted" style="padding:14px">'
+      +T(_rg+' — '+yr+'년 이후 선행예약 없음','No forward bookings for '+_rg,'Không có đặt trước cho '+_rg)+'</td></tr></tbody>';
+    if($('fwdNote'))$('fwdNote').textContent='';
+    if(CH['fwdMO']){CH['fwdMO'].destroy();delete CH['fwdMO'];}
+    return;
+  }
   var sum=function(k){return ms.reduce(function(s,m){return s+(+m[k]||0);},0);};
   var prn=ms.reduce(function(s,m){return s+(+m.prn||0);},0);
   var rn=sum('rn'), bk=sum('bookings'), ttv=sum('ttv');
@@ -1933,26 +1943,11 @@ function renderForward(){
       +'<td>'+(+m.los).toFixed(2)+'</td><td>'+(p?f0(p):'<span class="muted">–</span>')+'</td>'
       +(gg==null?'<td class="muted">–</td>':'<td class="'+(gg>=0?'pos':'neg')+'">'+(gg>=0?'▲':'▼')+' '+Math.abs(gg).toFixed(0)+'%</td>')
       +'</tr>';});
-  // 지역 전체 보기일 때만 지역별 요약을 덧붙인다
-  if(PICKRGN==='ALL'&&fw.by_region){
-    var rs=Object.keys(fw.by_region).map(function(k){
-      var v=fw.by_region[k];
-      return {k:k,rn:v.reduce(function(s,x){return s+(+x.rn||0);},0),
-              bk:v.reduce(function(s,x){return s+(+x.bookings||0);},0),
-              ttv:v.reduce(function(s,x){return s+(+x.ttv||0);},0),
-              p:v.reduce(function(s,x){return s+(+x.prn||0);},0)};}).sort(function(a,b){return b.rn-a.rn;});
-    th+='<tr><td colspan="9" style="background:var(--card2,#f3f5f8);font-weight:700;font-size:11px">'
-      +T('지역별','By region','Theo khu vực')+'</td></tr>';
-    rs.forEach(function(r){
-      var gg=(r.p>0)?((r.rn-r.p)/r.p*100):null;
-      th+='<tr><td>'+r.k+'</td><td>'+f0(r.bk)+'</td>'
-        +'<td style="background:rgba(46,110,142,'+((r.rn/(rs[0].rn||1))*0.45).toFixed(2)+')">'+f0(r.rn)+'</td>'
-        +'<td>'+vc(r.ttv)+'</td><td class="muted">–</td><td class="muted">–</td><td class="muted">–</td>'
-        +'<td>'+(r.p?f0(r.p):'<span class="muted">–</span>')+'</td>'
-        +(gg==null?'<td class="muted">–</td>':'<td class="'+(gg>=0?'pos':'neg')+'">'+(gg>=0?'▲':'▼')+' '+Math.abs(gg).toFixed(0)+'%</td>')
-        +'</tr>';});
-  }
-  th+='</tbody>';
+  th+='<tr style="border-top:2px solid var(--line)"><td><b>'+T('합계','Total','Tổng')+'</b></td><td><b>'+f0(bk)+'</b></td>'
+    +'<td><b>'+f0(rn)+'</b></td><td><b>'+vc(ttv)+'</b></td><td class="muted">–</td><td class="muted">–</td><td class="muted">–</td>'
+    +'<td>'+(prn?f0(prn):'<span class="muted">–</span>')+'</td>'
+    +(g==null?'<td class="muted">–</td>':'<td class="'+(g>=0?'pos':'neg')+'"><b>'+(g>=0?'▲':'▼')+' '+Math.abs(g).toFixed(0)+'%</b></td>')
+    +'</tr></tbody>';
   if($('fwdTable'))$('fwdTable').innerHTML=th;
   if($('fwdNote'))$('fwdNote').textContent=T(
     '체크아웃 기준 · 취소 제외. 이 물량은 '+CURY+'년 집계·YoY·WoW 에 포함되지 않습니다. 전년 비교는 '+fw.prev_cut+' 까지 확보돼 있던 '+CURY+'년 물량과 맞춘 값입니다 (현재 컷 '+fw.cut+').',
