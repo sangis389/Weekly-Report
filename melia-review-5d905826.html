@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meliá · SCM Performance Review</title>
+<style>
+:root{
+  color-scheme: light;
+  --navy:#1F3864; --blue:#2E5496; --accent:#4472C4;
+  --ink:#1a1f2b; --mid:#5a6475; --line:#e3e7ee; --bg:#f7f8fb; --card:#fff;
+  --on:#2E7D32; --off:#C62828; --warn:#E8A33D; --y25:#9BB0CE; --y26:#2E5496;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Malgun Gothic","Segoe UI",Roboto,sans-serif;
+  font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1240px;margin:0 auto;padding:26px 22px 80px}
+header{border-bottom:3px solid var(--navy);padding-bottom:14px;display:flex;
+  justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.eyebrow{font-size:11px;letter-spacing:.14em;font-weight:700;color:var(--mid);text-transform:uppercase}
+h1{font-size:28px;line-height:1.25;margin:6px 0 5px;color:var(--navy);font-weight:800;letter-spacing:-.01em}
+.sub{font-size:12.5px;color:var(--mid)}
+.lang{display:flex;gap:4px;flex-shrink:0}
+.lang button{border:1px solid var(--line);background:var(--card);color:var(--mid);padding:5px 13px;
+  border-radius:7px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.lang button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+nav{position:sticky;top:0;z-index:30;background:var(--bg);padding:11px 0 9px;
+  border-bottom:1px solid var(--line);margin-bottom:22px;display:flex;gap:6px;flex-wrap:wrap}
+nav button{border:1px solid var(--line);background:var(--card);color:var(--mid);
+  padding:7px 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:.12s}
+nav button:hover{border-color:var(--accent);color:var(--blue)}
+nav button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+section{display:none;animation:fade .18s ease}
+section.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+h2{font-size:20px;color:var(--navy);margin:32px 0 4px;font-weight:750;letter-spacing:-.01em}
+h2:first-child{margin-top:0}
+h3{font-size:14.5px;color:var(--blue);margin:22px 0 8px;font-weight:700}
+.lede{font-size:13.5px;color:var(--mid);margin:0 0 16px}
+p{margin:0 0 11px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:13px 0;
+  box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.hero{background:linear-gradient(135deg,#1F3864,#2E5496);color:#fff;border:none;padding:24px 26px}
+.hero .k{font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.75;font-weight:700}
+.hero h2{color:#fff;margin:8px 0 9px;font-size:23px;line-height:1.35}
+.hero p{opacity:.92;margin:0;font-size:14.5px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(152px,1fr));gap:10px;margin:14px 0 4px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:14px 16px}
+.kpi .lab{font-size:11px;color:var(--mid);font-weight:650}
+.kpi .val{font-size:24px;font-weight:800;color:var(--navy);margin:4px 0 1px;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums}
+.kpi .note{font-size:11px;color:var(--mid)}
+.kpi.red .val{color:var(--off)} .kpi.green .val{color:var(--on)} .kpi.warn .val{color:var(--warn)}
+table{width:100%;border-collapse:collapse;font-size:13px;margin:9px 0 4px}
+th{background:var(--navy);color:#fff;font-weight:650;text-align:left;padding:8px 10px;font-size:12px;
+  border:1px solid #1F3864;white-space:normal;word-break:keep-all}
+.tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tscroll table{min-width:620px}
+td .sub-med{color:#9aa6bb;font-weight:400;white-space:nowrap}
+td{padding:7px 10px;border:1px solid var(--line);font-variant-numeric:tabular-nums}
+td.n,th.n{text-align:right}
+tbody tr:nth-child(even){background:#fbfcfe}
+.pos{color:var(--on);font-weight:700} .neg{color:var(--off);font-weight:700}
+.hm{overflow-x:auto;margin:10px 0 4px}
+.hm table{font-size:12px;min-width:860px}
+.hm th{padding:6px 4px;text-align:center;font-size:11px}
+.hm th.rowh{text-align:left;min-width:150px;position:sticky;left:0;z-index:2}
+.hm td{text-align:center;padding:8px 3px;font-weight:700;border-color:#eef1f6}
+.hm td.rowh{text-align:left;font-weight:650;background:#fff;position:sticky;left:0;z-index:1;border-right:2px solid var(--line)}
+.z0{background:#fff;color:#ccd2dd}.z1{background:#dbe5f5;color:#2b3a55}.z2{background:#b3c9ec;color:#1b2a45}
+.z3{background:#7ea3dd;color:#fff}.z4{background:#4472C4;color:#fff}.z5{background:#25457f;color:#fff}
+.legend{display:flex;gap:13px;align-items:center;font-size:11.5px;color:var(--mid);margin-top:7px;flex-wrap:wrap}
+.legend i{display:inline-block;width:17px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px;border:1px solid #e0e5ee}
+.tl-row{display:grid;grid-template-columns:152px 1fr;gap:11px;align-items:center;margin-bottom:8px}
+.tl-name{font-size:12.5px;font-weight:700;color:var(--navy);text-align:right}
+.tl-bar{position:relative;height:26px;background:#f0f3f8;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.tl-seg{position:absolute;top:0;bottom:0;border-radius:4px;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;min-width:14px}
+.tl-note{display:grid;grid-template-columns:152px 1fr;gap:11px;font-size:11.5px;color:var(--mid);margin:2px 0 8px}
+.tl-note b{color:var(--ink);font-weight:650}
+.tl-axis{display:grid;grid-template-columns:152px 1fr;gap:11px;font-size:10px;color:var(--mid);margin-top:2px}
+.tl-months{display:grid;grid-template-columns:repeat(24,1fr);text-align:center}
+.chartbox{position:relative;height:280px;margin:10px 0 4px}
+.chartbox.sm{height:230px}
+.callout{background:#eef4ff;border:1px solid #cfdefc;border-left:4px solid var(--accent);border-radius:8px;
+  padding:13px 17px;margin:11px 0;font-size:13.5px}
+.callout strong{color:var(--navy)}
+.alert{background:#fdf0ef;border-color:#f3cfcb;border-left-color:var(--off)}
+.good{background:#eef7ef;border-color:#c9e3cb;border-left-color:var(--on)}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid}
+.pill.on{background:#e8f5e9;color:#1b5e20;border-color:#bcdfbf}
+.pill.off{background:#fdecea;color:#8e1b14;border-color:#f2c9c4}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.picker{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 16px}
+.picker button{border:1px solid var(--line);background:var(--card);color:var(--mid);padding:9px 16px;
+  border-radius:9px;font:inherit;font-size:13.5px;font-weight:650;cursor:pointer;transition:.12s}
+.picker button:hover{border-color:var(--accent);color:var(--blue)}
+.picker button.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.dist{margin:6px 0}
+.dist-row{display:grid;grid-template-columns:82px 1fr 96px;gap:9px;align-items:center;margin-bottom:5px;font-size:12.5px}
+.dist-lab{color:var(--mid);text-align:right;font-weight:600}
+.dist-track{position:relative;height:20px;background:#f2f5f9;border-radius:4px;overflow:hidden}
+.dist-fill{position:absolute;left:0;top:0;bottom:0;background:var(--y26);border-radius:4px}
+.dist-ghost{position:absolute;left:0;top:0;bottom:0;border:1.5px dashed #9aa6bb;border-radius:4px;
+  background:rgba(154,166,187,.10)}
+.dist-val{font-size:12px;color:var(--mid);font-variant-numeric:tabular-nums}
+.swatch{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.mini{font-size:11.5px;color:var(--mid);margin-top:6px}
+.empty{padding:26px;text-align:center;color:var(--mid);font-size:13.5px;background:#fafbfd;border-radius:8px;
+  border:1px dashed var(--line)}
+@media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr}.tl-row,.tl-axis{grid-template-columns:96px 1fr}h1{font-size:21px}}
+footer{margin-top:40px;padding-top:15px;border-top:1px solid var(--line);font-size:11.5px;color:var(--mid);line-height:1.7}
+body.showall section{display:block;animation:none}
+body.showall nav{display:none}
+body.showall section+section{margin-top:34px;padding-top:30px;border-top:2px solid var(--line)}
+@media print{
+  body{background:#fff}
+  .wrap{max-width:none;padding:0}
+  nav,.lang,#btnPrint{display:none!important}
+  section{display:block!important;animation:none}
+  section+section{break-before:page;margin-top:0;padding-top:0;border-top:none}
+  .card,.kpi,table,.chartbox{break-inside:avoid}
+  .card{box-shadow:none}
+  a{text-decoration:none;color:inherit}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <div class="eyebrow">OHMYHOTEL · GLOBAL SCM · VIETNAM</div>
+    <h1 id="hTitle"></h1>
+    <div class="sub" id="hSub"></div>
+  </div>
+  <div class="lang">
+    <button id="bKo" class="on">KO</button><button id="bEn">EN</button>
+    <button id="btnPrint" style="margin-left:6px"></button>
+  </div>
+</header>
+<nav id="nav"></nav>
+<section id="s2"></section>
+<section id="s3"></section>
+<section id="s5"></section>
+<footer id="foot"></footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<script>
+var D = {"meta": {"cut": "2026-09-13", "basis": "checkout", "cur": "VND", "losL": ["1박", "2박", "3박", "4-5박", "6-7박", "8-14박", "15박+"], "leadL": ["당일", "1-3일", "4-7일", "8-14일", "15-30일", "31-60일", "61-90일", "91일+"], "cats": ["KR", "CN", "JP", "VN", "TH", "SEA", "IN", "WEST", "ETC"], "catLabel": {"KR": "한국", "CN": "중국", "JP": "일본", "VN": "베트남", "TH": "태국", "SEA": "동남아", "IN": "인도", "WEST": "서양", "ETC": "기타"}}, "hotels": {"DN Riverfront": {"name": "Melia Vinpearl Danang Riverfront", "short": "DN Riverfront", "region": "Da Nang", "pic": "Mike", "ctype": "Shared Rate", "y": {"2025": {"bk": 70, "rn": 156, "ttv": 334422251.0, "adr": 2143732, "los": 1.91, "lead": 15.1, "hotels": 1, "monthly": [{"m": 1, "bk": 3, "rn": 8, "ttv": 15243989.0, "adr": 1905499}, {"m": 2, "bk": 4, "rn": 13, "ttv": 25957117.0, "adr": 1996701}, {"m": 3, "bk": 13, "rn": 24, "ttv": 49317116.0, "adr": 2054880}, {"m": 4, "bk": 1, "rn": 2, "ttv": 4873333.0, "adr": 2436666}, {"m": 5, "bk": 5, "rn": 14, "ttv": 30141012.0, "adr": 2152929}, {"m": 6, "bk": 15, "rn": 42, "ttv": 94656192.0, "adr": 2253719}, {"m": 7, "bk": 25, "rn": 45, "ttv": 97650485.0, "adr": 2170011}, {"m": 8, "bk": 1, "rn": 1, "ttv": 2008498.0, "adr": 2008498}, {"m": 9, "bk": 1, "rn": 1, "ttv": 2317509.0, "adr": 2317509}, {"m": 10, "bk": 1, "rn": 4, "ttv": 7622000.0, "adr": 1905500}, {"m": 11, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 12, "bk": 1, "rn": 2, "ttv": 4635000.0, "adr": 2317500}], "losd": {"n": 70, "mean": 1.91, "med": 2.0, "b": [30, 23, 14, 2, 1, 0, 0]}, "leadd": {"n": 70, "mean": 15.06, "med": 6.0, "b": [6, 26, 10, 12, 9, 3, 1, 3]}, "nat": [{"c": "KR", "n": 90, "pct": 57.7}, {"c": "VN", "n": 34, "pct": 21.8}, {"c": "CN", "n": 17, "pct": 10.9}, {"c": "ETC", "n": 5, "pct": 3.2}, {"c": "IN", "n": 4, "pct": 2.6}, {"c": "JP", "n": 2, "pct": 1.3}, {"c": "TH", "n": 2, "pct": 1.3}, {"c": "WEST", "n": 2, "pct": 1.3}]}, "2026": {"bk": 25, "rn": 57, "ttv": 140502670.56, "adr": 2464959, "los": 2.28, "lead": 25.0, "hotels": 1, "monthly": [{"m": 1, "bk": 1, "rn": 5, "ttv": 390.56, "adr": 78}, {"m": 2, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 3, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 4, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 5, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 6, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 7, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 8, "bk": 1, "rn": 2, "ttv": 4223000.0, "adr": 2111500}, {"m": 9, "bk": 15, "rn": 31, "ttv": 80519551.0, "adr": 2597405}, {"m": 10, "bk": 5, "rn": 13, "ttv": 39297853.0, "adr": 3022912}, {"m": 11, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 12, "bk": 3, "rn": 6, "ttv": 16461876.0, "adr": 2743646}], "losd": {"n": 25, "mean": 2.28, "med": 2.0, "b": [2, 16, 6, 1, 0, 0, 0]}, "leadd": {"n": 25, "mean": 25.0, "med": 18.0, "b": [2, 1, 2, 6, 9, 2, 2, 1]}, "nat": [{"c": "KR", "n": 44, "pct": 77.2}, {"c": "CN", "n": 6, "pct": 10.5}, {"c": "VN", "n": 5, "pct": 8.8}, {"c": "IN", "n": 2, "pct": 3.5}]}}, "bookmonth": {"2025-01": 10, "2025-02": 21, "2025-03": 23, "2025-04": 8, "2025-05": 28, "2025-06": 21, "2025-07": 45, "2025-12": 5, "2026-08": 23, "2026-09": 29}, "roomtypes": [{"n": "Deluxe Room", "bk": 52, "rn": 118, "adr": 2033871}, {"n": "Junior Suite", "bk": 15, "rn": 31, "adr": 2433409}, {"n": "Suite Panoramic River View", "bk": 10, "rn": 24, "adr": 3275722}, {"n": "Grand Premium Room", "bk": 8, "rn": 23, "adr": 1785249}, {"n": "Deluxe Room Horizon View", "bk": 7, "rn": 11, "adr": 2233675}, {"n": "Suite", "bk": 3, "rn": 6, "adr": 2540672}], "promos": [{"n": "(없음)", "bk": 30, "rn": 72}, {"n": "Special Promotion-Peak Season", "bk": 28, "rn": 55}, {"n": "Min & Max Nights-Min 2 Nights", "bk": 22, "rn": 50}, {"n": "Special Promotion-High Season", "bk": 15, "rn": 36}]}, "Hue": {"name": "Melia Vinpearl Hue", "short": "Hue", "region": "Hue", "pic": "Nhi", "ctype": "Shared Rate", "y": {"2025": {"bk": 21, "rn": 23, "ttv": 58095517.0, "adr": 2525892, "los": 1.1, "lead": 11.9, "hotels": 1, "monthly": [{"m": 1, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 2, "bk": 1, "rn": 1, "ttv": 2144359.0, "adr": 2144359}, {"m": 3, "bk": 11, "rn": 12, "ttv": 29859682.0, "adr": 2488307}, {"m": 4, "bk": 8, "rn": 9, "ttv": 24337226.0, "adr": 2704136}, {"m": 5, "bk": 1, "rn": 1, "ttv": 1754250.0, "adr": 1754250}, {"m": 6, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 7, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 8, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 9, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 10, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 11, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 12, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}], "losd": {"n": 21, "mean": 1.1, "med": 1.0, "b": [19, 2, 0, 0, 0, 0, 0]}, "leadd": {"n": 21, "mean": 11.86, "med": 4.0, "b": [4, 6, 4, 2, 2, 2, 1, 0]}, "nat": [{"c": "VN", "n": 9, "pct": 39.1}, {"c": "ETC", "n": 5, "pct": 21.7}, {"c": "WEST", "n": 4, "pct": 17.4}, {"c": "KR", "n": 3, "pct": 13.0}, {"c": "JP", "n": 2, "pct": 8.7}]}, "2026": {"bk": 1, "rn": 1, "ttv": 2270526.0, "adr": 2270526, "los": 1.0, "lead": 48.0, "hotels": 1, "monthly": [{"m": 1, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 2, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 3, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 4, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 5, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 6, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 7, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 8, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 9, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 10, "bk": 1, "rn": 1, "ttv": 2270526.0, "adr": 2270526}, {"m": 11, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 12, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}], "losd": {"n": 1, "mean": 1.0, "med": 1.0, "b": [1, 0, 0, 0, 0, 0, 0]}, "leadd": {"n": 1, "mean": 48.0, "med": 48.0, "b": [0, 0, 0, 0, 0, 1, 0, 0]}, "nat": [{"c": "ETC", "n": 1, "pct": 100.0}]}}, "bookmonth": {"2025-02": 2, "2025-03": 18, "2025-04": 3, "2026-09": 1}, "roomtypes": [{"n": "Premium Room With Views", "bk": 10, "rn": 11, "adr": 2395764}, {"n": "Premium Room", "bk": 8, "rn": 9, "adr": 2112527}, {"n": "Suite", "bk": 3, "rn": 3, "adr": 4415214}, {"n": "Deluxe Room", "bk": 1, "rn": 1, "adr": 1754250}], "promos": [{"n": "(없음)", "bk": 22, "rn": 24}]}, "Quang Binh": {"name": "Melia Vinpearl Quang Binh", "short": "Quang Binh", "region": "Dong Hoi", "pic": "Mike", "ctype": "Shared Rate", "y": {"2025": {"bk": 23, "rn": 37, "ttv": 58060449.0, "adr": 1569201, "los": 1.35, "lead": 8.8, "hotels": 1, "monthly": [{"m": 1, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 2, "bk": 2, "rn": 3, "ttv": 3995282.0, "adr": 1331761}, {"m": 3, "bk": 1, "rn": 1, "ttv": 3399000.0, "adr": 3399000}, {"m": 4, "bk": 5, "rn": 10, "ttv": 12968525.0, "adr": 1296852}, {"m": 5, "bk": 1, "rn": 2, "ttv": 2703590.0, "adr": 1351795}, {"m": 6, "bk": 6, "rn": 12, "ttv": 19967474.0, "adr": 1663956}, {"m": 7, "bk": 6, "rn": 7, "ttv": 11789736.0, "adr": 1684248}, {"m": 8, "bk": 2, "rn": 2, "ttv": 3236842.0, "adr": 1618421}, {"m": 9, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 10, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 11, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 12, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}], "losd": {"n": 23, "mean": 1.35, "med": 1.0, "b": [18, 4, 0, 1, 0, 0, 0]}, "leadd": {"n": 23, "mean": 8.78, "med": 3.0, "b": [3, 10, 1, 3, 4, 2, 0, 0]}, "nat": [{"c": "VN", "n": 21, "pct": 56.8}, {"c": "CN", "n": 9, "pct": 24.3}, {"c": "KR", "n": 3, "pct": 8.1}, {"c": "ETC", "n": 3, "pct": 8.1}, {"c": "WEST", "n": 1, "pct": 2.7}]}, "2026": {"bk": 1, "rn": 1, "ttv": 1342895.0, "adr": 1342895, "los": 1.0, "lead": 0.0, "hotels": 1, "monthly": [{"m": 1, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 2, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 3, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 4, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 5, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 6, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 7, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 8, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 9, "bk": 1, "rn": 1, "ttv": 1342895.0, "adr": 1342895}, {"m": 10, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 11, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 12, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}], "losd": {"n": 1, "mean": 1.0, "med": 1.0, "b": [1, 0, 0, 0, 0, 0, 0]}, "leadd": {"n": 1, "mean": 0.0, "med": 0.0, "b": [1, 0, 0, 0, 0, 0, 0, 0]}, "nat": [{"c": "CN", "n": 1, "pct": 100.0}]}}, "bookmonth": {"2025-02": 3, "2025-03": 6, "2025-04": 7, "2025-06": 15, "2025-07": 6, "2026-09": 1}, "roomtypes": [{"n": "Deluxe City View", "bk": 22, "rn": 36, "adr": 1504916}, {"n": "Deluxe River View", "bk": 1, "rn": 1, "adr": 1827368}, {"n": "Suite River View", "bk": 1, "rn": 1, "adr": 3399000}], "promos": [{"n": "Special Promotion-High Season", "bk": 14, "rn": 21}, {"n": "(없음)", "bk": 10, "rn": 17}]}}, "rgnOf": {"DN Riverfront": "Da Nang", "Hue": "Hue", "Quang Binh": "Dong Hoi"}, "sugg": {"los1": [{"k": "DN Riverfront", "bk": 70, "one": 30, "onePct": 42.9, "w7": 42, "w7Pct": 60.0, "rn": 156, "rnM2N": 186}, {"k": "Hue", "bk": 21, "one": 19, "onePct": 90.5, "w7": 14, "w7Pct": 66.7, "rn": 23, "rnM2N": 42}, {"k": "Quang Binh", "bk": 23, "one": 18, "onePct": 78.3, "w7": 14, "w7Pct": 60.9, "rn": 37, "rnM2N": 55}, {"k": "RGN:Da Nang", "bk": 7032, "one": 3235, "onePct": 46.0, "w7": 3862, "w7Pct": 54.9, "rn": 16188, "rnM2N": 19423}, {"k": "RGN:Hue", "bk": 495, "one": 358, "onePct": 72.3, "w7": 372, "w7Pct": 75.2, "rn": 776, "rnM2N": 1134}, {"k": "RGN:Dong Hoi", "bk": 38, "one": 26, "onePct": 68.4, "w7": 25, "w7Pct": 65.8, "rn": 61, "rnM2N": 87}], "dow": [{"k": "DN Riverfront", "nights": 191, "월": 14, "화": 18, "수": 27, "목": 28, "금": 37, "토": 41, "일": 26, "wd": 45.5, "we": 40.8}, {"k": "Hue", "nights": 24, "월": 0, "화": 0, "수": 3, "목": 5, "금": 4, "토": 5, "일": 7, "wd": 33.3, "we": 37.5}, {"k": "Quang Binh", "nights": 32, "월": 3, "화": 5, "수": 2, "목": 5, "금": 5, "토": 6, "일": 6, "wd": 46.9, "we": 34.4}, {"k": "RGN:Da Nang", "nights": 27466, "월": 3727, "화": 3630, "수": 3717, "목": 3778, "금": 4144, "토": 4515, "일": 3955, "wd": 54.1, "we": 31.5}, {"k": "RGN:Hue", "nights": 1934, "월": 239, "화": 217, "수": 191, "목": 245, "금": 319, "토": 441, "일": 282, "wd": 46.1, "we": 39.3}, {"k": "RGN:Dong Hoi", "nights": 859, "월": 103, "화": 121, "수": 100, "목": 123, "금": 123, "토": 156, "일": 133, "wd": 52.0, "we": 32.5}], "rgnMonth": {"Da Nang": {"2025": [429, 879, 1829, 1520, 1501, 1435, 2193, 1752, 1317, 1328, 910, 1095], "2026": [1741, 2349, 2870, 1570, 1202, 601, 849, 1216, 1249, 500, 230, 215]}, "Hue": {"2025": [8, 26, 72, 82, 47, 103, 144, 98, 68, 45, 49, 34], "2026": [57, 121, 193, 187, 120, 187, 246, 229, 98, 7, 16, 22]}, "Dong Hoi": {"2025": [3, 3, 5, 11, 4, 12, 7, 5, 2, 7, 2, 0], "2026": [29, 74, 58, 96, 54, 186, 159, 318, 147, 2, 4, 0]}}, "cancel": {"Da Nang": {"cancelled": 2001, "active": 5444, "rate": 26.9}, "Hue": {"cancelled": 206, "active": 828, "rate": 19.9}, "Dong Hoi": {"cancelled": 242, "active": 577, "rate": 29.5}}, "cancelVN": {"rate": 26.2}}, "top3": {"2025": [{"r": "Da Nang", "bkShare": 11.9, "rnShare": 12.6, "adr": 1146321, "los": 2.05, "lead": 15.0, "leadMed": 5}, {"r": "Nha Trang", "bkShare": 19.6, "rnShare": 20.3, "adr": 1484258, "los": 2.06, "lead": 26.7, "leadMed": 13}, {"r": "Phu Quoc", "bkShare": 8.0, "rnShare": 8.8, "adr": 2171878, "los": 2.23, "lead": 33.3, "leadMed": 21}], "2026": [{"r": "Da Nang", "bkShare": 9.0, "rnShare": 10.3, "adr": 1385828, "los": 2.39, "lead": 24.3, "leadMed": 8}, {"r": "Nha Trang", "bkShare": 21.8, "rnShare": 24.4, "adr": 1372761, "los": 2.41, "lead": 29.4, "leadMed": 17}, {"r": "Phu Quoc", "bkShare": 7.7, "rnShare": 8.1, "adr": 2608648, "los": 2.29, "lead": 46.2, "leadMed": 29}]}, "regions": {"Da Nang": {"name": "Da Nang", "y": {"2025": {"bk": 7032, "rn": 16188, "ttv": 18556636327.17, "adr": 1146321, "los": 2.05, "lead": 15.0, "hotels": 111, "losd": {"n": 7032, "mean": 2.05, "med": 2.0, "b": [3235, 1804, 1148, 671, 132, 40, 2]}, "leadd": {"n": 7032, "mean": 15.02, "med": 5.0, "b": [1572, 1578, 710, 850, 1173, 795, 226, 126]}, "nat": [{"c": "KR", "n": 4088, "pct": 25.3}, {"c": "VN", "n": 3506, "pct": 21.7}, {"c": "CN", "n": 3131, "pct": 19.3}, {"c": "ETC", "n": 2835, "pct": 17.5}, {"c": "WEST", "n": 1579, "pct": 9.8}, {"c": "JP", "n": 404, "pct": 2.5}, {"c": "IN", "n": 319, "pct": 2.0}, {"c": "TH", "n": 207, "pct": 1.3}, {"c": "SEA", "n": 119, "pct": 0.7}]}, "2026": {"bk": 5444, "rn": 14592, "ttv": 20222000354.559998, "adr": 1385828, "los": 2.39, "lead": 24.3, "hotels": 83, "losd": {"n": 5444, "mean": 2.39, "med": 2.0, "b": [2094, 1388, 1020, 676, 167, 89, 10]}, "leadd": {"n": 5442, "mean": 24.3, "med": 8.0, "b": [896, 1232, 505, 562, 842, 750, 314, 341]}, "nat": [{"c": "ETC", "n": 3538, "pct": 24.2}, {"c": "KR", "n": 2896, "pct": 19.8}, {"c": "VN", "n": 2553, "pct": 17.5}, {"c": "CN", "n": 2293, "pct": 15.7}, {"c": "WEST", "n": 2285, "pct": 15.7}, {"c": "JP", "n": 499, "pct": 3.4}, {"c": "IN", "n": 276, "pct": 1.9}, {"c": "TH", "n": 152, "pct": 1.0}, {"c": "SEA", "n": 100, "pct": 0.7}]}}}, "Dong Hoi": {"name": "Dong Hoi", "y": {"2025": {"bk": 38, "rn": 61, "ttv": 77004848.0, "adr": 1262375, "los": 1.45, "lead": 7.2, "hotels": 3, "losd": {"n": 38, "mean": 1.45, "med": 1.0, "b": [26, 10, 0, 2, 0, 0, 0]}, "leadd": {"n": 38, "mean": 7.24, "med": 3.0, "b": [6, 15, 4, 6, 5, 2, 0, 0]}, "nat": [{"c": "VN", "n": 40, "pct": 65.6}, {"c": "CN", "n": 13, "pct": 21.3}, {"c": "ETC", "n": 4, "pct": 6.6}, {"c": "KR", "n": 3, "pct": 4.9}, {"c": "WEST", "n": 1, "pct": 1.6}]}, "2026": {"bk": 577, "rn": 1127, "ttv": 1266160820.0, "adr": 1123479, "los": 1.39, "lead": 14.1, "hotels": 6, "losd": {"n": 577, "mean": 1.39, "med": 1.0, "b": [417, 107, 45, 6, 2, 0, 0]}, "leadd": {"n": 577, "mean": 14.13, "med": 3.0, "b": [184, 116, 57, 54, 72, 70, 14, 10]}, "nat": [{"c": "VN", "n": 910, "pct": 80.7}, {"c": "CN", "n": 60, "pct": 5.3}, {"c": "ETC", "n": 60, "pct": 5.3}, {"c": "KR", "n": 41, "pct": 3.6}, {"c": "WEST", "n": 31, "pct": 2.8}, {"c": "JP", "n": 24, "pct": 2.1}, {"c": "SEA", "n": 1, "pct": 0.1}]}}}, "Hue": {"name": "Hue", "y": {"2025": {"bk": 495, "rn": 776, "ttv": 882484783.0, "adr": 1137223, "los": 1.39, "lead": 8.1, "hotels": 11, "losd": {"n": 495, "mean": 1.39, "med": 1.0, "b": [358, 103, 18, 14, 2, 0, 0]}, "leadd": {"n": 495, "mean": 8.13, "med": 2.0, "b": [153, 146, 73, 46, 42, 27, 4, 4]}, "nat": [{"c": "VN", "n": 474, "pct": 61.1}, {"c": "ETC", "n": 93, "pct": 12.0}, {"c": "CN", "n": 85, "pct": 11.0}, {"c": "WEST", "n": 53, "pct": 6.8}, {"c": "KR", "n": 42, "pct": 5.4}, {"c": "JP", "n": 28, "pct": 3.6}, {"c": "TH", "n": 1, "pct": 0.1}]}, "2026": {"bk": 828, "rn": 1483, "ttv": 2001269107.0, "adr": 1349473, "los": 1.5, "lead": 16.1, "hotels": 16, "losd": {"n": 828, "mean": 1.5, "med": 1.0, "b": [536, 221, 55, 11, 3, 1, 1]}, "leadd": {"n": 828, "mean": 16.08, "med": 4.0, "b": [187, 218, 102, 72, 104, 94, 20, 31]}, "nat": [{"c": "VN", "n": 854, "pct": 57.6}, {"c": "CN", "n": 206, "pct": 13.9}, {"c": "ETC", "n": 175, "pct": 11.8}, {"c": "WEST", "n": 174, "pct": 11.7}, {"c": "KR", "n": 37, "pct": 2.5}, {"c": "JP", "n": 31, "pct": 2.1}, {"c": "TH", "n": 5, "pct": 0.3}, {"c": "SEA", "n": 1, "pct": 0.1}]}}}}};
+(function(){
+"use strict";
+var LANG='ko';
+function T(ko,en){return LANG==='en'?en:ko;}
+
+var MONTHS=['2025-01','2025-02','2025-03','2025-04','2025-05','2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12',
+            '2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
+var ORDER=['DN Riverfront','Hue','Quang Binh'];
+var RG={'DN Riverfront':'Da Nang','Hue':'Hue','Quang Binh':'Dong Hoi'};
+var COLOR={'DN Riverfront':'#2E7D32','Hue':'#C62828','Quang Binh':'#E8A33D'};
+var NATC={KR:'#2E5496',CN:'#C62828',JP:'#7E57C2',VN:'#2E7D32',TH:'#E8A33D',SEA:'#00897B',IN:'#F06292',WEST:'#5C6BC0',ETC:'#9aa6bb'};
+var NAT_EN={KR:'Korea',CN:'China',JP:'Japan',VN:'Vietnam',TH:'Thailand',SEA:'SE Asia',IN:'India',WEST:'Western',ETC:'Other'};
+var DOWK=['월','화','수','목','금','토','일'];
+function natLab(c){return LANG==='en'?(NAT_EN[c]||c):(D.meta.catLabel[c]||c);}
+function mLab(){return LANG==='en'
+  ?['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  :['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];}
+function losLab(){return LANG==='en'
+  ?['1 night','2 nights','3 nights','4-5','6-7','8-14','15+']:D.meta.losL;}
+function leadLab(){return LANG==='en'
+  ?['Same day','1-3 d','4-7 d','8-14 d','15-30 d','31-60 d','61-90 d','91+ d']:D.meta.leadL;}
+function dowLab(){return LANG==='en'?['Mon','Tue','Wed','Thu','Fri','Sat','Sun']:DOWK;}
+
+function nf(v){return (v===null||v===undefined)?'—':Number(v).toLocaleString('en-US');}
+function pctd(a,b){if(!b)return null;return (a-b)/b*100;}
+function dlt(v,suf){if(v===null||v===undefined)return '<span style="color:#9aa6bb">—</span>';
+  var s=(v>=0?'+':'')+v.toFixed(1)+(suf||'%');
+  return '<span class="'+(v>=0?'pos':'neg')+'">'+s+'</span>';}
+
+var charts={};
+function destroy(id){if(charts[id]){try{charts[id].destroy();}catch(e){} delete charts[id];}}
+/* 차트 생성 실패가 페이지 전체를 멈추지 않도록 감싼다 */
+function mkChart(id,cfg){
+  var el=document.getElementById(id);
+  if(!el){console.warn('canvas not found: '+id);return null;}
+  try{ return new Chart(el,cfg); }
+  catch(e){ console.error('chart failed: '+id+' — '+e.message); return null; }
+}
+
+/* ─────────── 공통 조각 ─────────── */
+function distHTML(cur,ref,labels,curLab,refLab){
+  if(!cur||!cur.n)return '<div class="empty">'+T('데이터 없음','No data')+'</div>';
+  var mx=1;
+  labels.forEach(function(_,i){
+    var a=cur.b[i]/cur.n*100; if(a>mx)mx=a;
+    if(ref&&ref.n){var b=ref.b[i]/ref.n*100; if(b>mx)mx=b;}
+  });
+  var h='<div class="dist">';
+  labels.forEach(function(L,i){
+    var c=cur.b[i], cp=c/cur.n*100;
+    var rp=(ref&&ref.n)?ref.b[i]/ref.n*100:null;
+    h+='<div class="dist-row"><div class="dist-lab">'+L+'</div><div class="dist-track">';
+    if(rp!==null)h+='<div class="dist-ghost" style="width:'+(rp/mx*100).toFixed(1)+'%"></div>';
+    h+='<div class="dist-fill" style="width:'+(cp/mx*100).toFixed(1)+'%"></div></div>'+
+       '<div class="dist-val">'+c+T('건',' bk')+' · '+cp.toFixed(0)+'%'+
+       (rp!==null?' <span style="color:#9aa6bb">('+rp.toFixed(0)+'%)</span>':'')+'</div></div>';
+  });
+  return h+'</div><div class="mini"><span class="swatch" style="background:var(--y26)"></span>'+curLab+
+    (ref&&ref.n?' &nbsp; <span class="swatch" style="border:1.5px dashed #9aa6bb;background:rgba(154,166,187,.1)"></span>'+refLab:'')+
+    ' &nbsp;·&nbsp; '+T('평균','avg')+' '+cur.mean+' · '+T('중앙값','median')+' '+cur.med+'</div>';
+}
+function natHTML(nat,ref,refLab){
+  if(!nat||!nat.length)return '<div class="empty">'+T('데이터 없음','No data')+'</div>';
+  var rm={};if(ref)ref.forEach(function(x){rm[x.c]=x.pct;});
+  var h='<div style="display:flex;height:26px;border-radius:6px;overflow:hidden;border:1px solid var(--line);margin-bottom:12px">';
+  nat.forEach(function(x){
+    h+='<div title="'+natLab(x.c)+' '+x.pct+'%" style="width:'+x.pct+'%;background:'+(NATC[x.c]||'#9aa6bb')+
+       ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:10.5px;font-weight:700">'+
+       (x.pct>=11?natLab(x.c):'')+'</div>';
+  });
+  h+='</div><table><tr><th>'+T('국적','Nationality')+'</th><th class="n">R/N</th><th class="n">'+
+     T('비중','Share')+'</th><th class="n">'+refLab+'</th><th class="n">'+T('차이','Gap')+'</th></tr>';
+  nat.forEach(function(x){
+    var r=rm[x.c];
+    h+='<tr><td><span class="swatch" style="background:'+(NATC[x.c]||'#9aa6bb')+'"></span>'+natLab(x.c)+'</td>'+
+       '<td class="n">'+x.n+'</td><td class="n">'+x.pct+'%</td>'+
+       '<td class="n">'+(r!==undefined?r+'%':'—')+'</td>'+
+       '<td class="n">'+(r!==undefined?dlt(x.pct-r,'p'):'—')+'</td></tr>';
+  });
+  return h+'</table>';
+}
+function tbl(rows,cols){
+  if(!rows||!rows.length)return '<div class="empty">'+T('데이터 없음','No data')+'</div>';
+  var h='<table><tr>';cols.forEach(function(c){h+='<th class="'+(c[2]||'')+'">'+c[0]+'</th>';});h+='</tr>';
+  rows.forEach(function(r){h+='<tr>';cols.forEach(function(c){h+='<td class="'+(c[2]||'')+'">'+c[1](r)+'</td>';});h+='</tr>';});
+  return h+'</table>';
+}
+
+/* ─────────── s2 : 예약 현황 ─────────── */
+function renderS2(){
+  /* 주요 지역 비중 — 절대 판매량·전년 대비는 표시하지 않는다 */
+  var t26=D.top3['2026'];
+  function t3row(x){
+    return '<tr><td><strong>'+x.r+'</strong></td>'+
+      '<td class="n">'+x.rnShare.toFixed(1)+'%</td>'+
+      '<td class="n">'+x.bkShare.toFixed(1)+'%</td>'+
+      '<td class="n">'+nf(x.adr)+'</td>'+
+      '<td class="n">'+x.los.toFixed(2)+'</td>'+
+      '<td class="n">'+x.lead.toFixed(1)+T('일','d')+
+        ' <span class="sub-med">('+x.leadMed+')</span></td></tr>';
+  }
+  var scale='<div class="card"><h3 style="margin-top:0">'+
+    T('OMH 베트남 — 주요 지역 비중','OMH Vietnam — share by key market')+'</h3>'+
+    '<div class="tscroll"><table><tr><th>'+T('지역','Market')+'</th>'+
+    '<th class="n">'+T('R/N 비중','Room night share')+'</th>'+
+    '<th class="n">'+T('예약 비중','Booking share')+'</th>'+
+    '<th class="n">'+T('평균 ADR (₫)','Average ADR (₫)')+'</th>'+
+    '<th class="n">'+T('평균 LOS','Average LOS')+'</th>'+
+    '<th class="n">'+T('리드타임','Lead time')+'</th></tr>'+
+    t26.map(t3row).join('')+'</table></div>'+
+    '<div class="mini">'+T('각 지역이 OMH 베트남 전체에서 차지하는 비중입니다. 2026년 9/13까지 생성된 예약 기준. 리드타임 괄호 안은 중앙값(일)입니다.',
+      "Each market's share of OMH's total Vietnam volume. Based on bookings created on or before 13 Sep 2026. The figure in brackets is the median lead time in days.")+'</div></div>';
+
+  /* 가동 월 기준 생산성 — 그 해에 예약이 실제로 생성된 개월 수로 나눈 값 */
+  function actv(key,yr){
+    var bm=D.hotels[key].bookmonth||{},n=0,t=0;
+    Object.keys(bm).forEach(function(m){
+      if(m.indexOf(yr)===0&&bm[m]>0){n++;t+=bm[m];}});
+    return {n:n,t:t,per:n?t/n:0};
+  }
+  var prod='<table><tr><th>'+T('시설','Property')+'</th>'+
+    '<th class="n">2025 '+T('가동 월','Active months')+'</th><th class="n">2025 R/N</th><th class="n">2025 '+T('월평균','Per month')+'</th>'+
+    '<th class="n">2026 '+T('가동 월','Active months')+'</th><th class="n">2026 R/N</th><th class="n">2026 '+T('월평균','Per month')+'</th>'+
+    '<th class="n">'+T('월평균 증감','Change')+'</th></tr>';
+  ORDER.forEach(function(k){
+    var a=actv(k,'2025'), b=actv(k,'2026');
+    var d=(a.per&&b.per)?pctd(b.per,a.per):null;
+    prod+='<tr><td><strong>'+k+'</strong></td>'+
+      '<td class="n">'+a.n+'</td><td class="n">'+nf(a.t)+'</td><td class="n">'+a.per.toFixed(1)+'</td>'+
+      '<td class="n">'+b.n+'</td><td class="n">'+nf(b.t)+'</td><td class="n"><strong>'+b.per.toFixed(1)+'</strong></td>'+
+      '<td class="n">'+((d===null)?'—':dlt(d))+'</td></tr>';
+  });
+  prod+='</table><div class="mini">'+
+    T('예약이 실제로 생성된 개월 수로 나눈 값입니다. 연간 총합이 작은 것은 판매가 멈춘 개월 수 때문이며, 문이 열려 있던 달만 보면 생산성은 오히려 올라갔습니다.',
+      'Room nights divided by the number of months in which bookings were actually created. The lower annual total reflects the months when sales were paused; on the months that were open, productivity actually rose.')+
+    '</div>';
+
+  var off=[
+    ['DN Riverfront','2025-08 ~ 2026-07',12,'on',T('8월 재가동','Reopened Aug')],
+    ['Hue','2025-05 ~ 2026-08',16,'off',T('꺼짐','Still off')],
+    ['Quang Binh','2025-08 ~ 2026-08',13,'off',T('꺼짐','Still off')]
+  ];
+  var offT='<table><tr><th>'+T('시설','Property')+'</th><th>'+T('OFF 구간','Inactive period')+'</th>'+
+    '<th class="n">'+T('개월','Months')+'</th><th>'+T('현재','Now')+'</th></tr>';
+  off.forEach(function(r){
+    offT+='<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td class="n neg">'+r[2]+'</td>'+
+          '<td><span class="pill '+r[3]+'">'+r[4]+'</span></td></tr>';
+  });
+  offT+='</table>';
+
+  var seg=[
+    ['DN Riverfront','#2E7D32',[[0,29.2,156,'2025-01 ~ 07'],[45.8,4.2,5,'2025-12'],[79.2,8.3,52,'2026-08 ~ 09']]],
+    ['Hue','#C62828',[[4.2,12.5,23,'2025-02 ~ 04'],[83.3,4.2,1,'2026-09']]],
+    ['Quang Binh','#E8A33D',[[4.2,25,37,'2025-02 ~ 07'],[83.3,4.2,1,'2026-09']]]
+  ];
+  var tl='';
+  seg.forEach(function(s){
+    tl+='<div class="tl-row"><div class="tl-name">'+s[0]+'</div><div class="tl-bar">';
+    s[2].forEach(function(b){
+      tl+='<div class="tl-seg" title="'+b[3]+' · '+b[2]+' R/N" style="left:'+b[0]+
+          '%;width:'+b[1]+'%;background:'+s[1]+'">'+(b[1]>=4?b[2]:'')+'</div>';
+    });
+    tl+='</div></div>';
+    tl+='<div class="tl-note"><div></div><div>'+s[2].map(function(b){
+      return '<b>'+b[3]+'</b> · '+b[2]+' R/N';}).join(' &nbsp;|&nbsp; ')+'</div></div>';
+  });
+  tl+='<div class="tl-axis"><div></div><div class="tl-months">'+
+      '<span>25.1</span><span></span><span>3</span><span></span><span>5</span><span></span><span>7</span><span></span>'+
+      '<span>9</span><span></span><span>11</span><span></span>'+
+      '<span>26.1</span><span></span><span>3</span><span></span><span>5</span><span></span><span>7</span><span></span>'+
+      '<span>9</span><span></span><span>11</span><span></span></div></div>';
+
+  document.getElementById('s2').innerHTML=
+    scale+
+    '<h2>'+T('가동 구간','Active periods')+'</h2>'+
+    '<p class="lede">'+T('예약이 생성된 구간을 같은 시간축에 올린 것입니다. Riverfront만 2026년 8월에 다시 켜졌고, 나머지 둘은 아직 꺼져 있습니다.',
+      'The same booking activity placed on one timeline. Only Riverfront came back on in August 2026; the other two remain inactive.')+'</p>'+
+    '<div class="card">'+tl+'<div class="mini">'+
+      T('막대 안 숫자는 해당 구간에 생성된 R/N 입니다. 막대에 마우스를 올리면 기간이 표시됩니다.',
+        'The number inside each bar is the room nights created in that period. Hover a bar to see the dates.')+'</div></div>'+
+    '<h2>'+T('가동 월 기준 생산성','Productivity per active month')+'</h2>'+
+    '<p class="lede">'+T('판매가 열려 있던 달만 놓고 비교한 것입니다.',
+      'A like-for-like comparison using only the months when sales were open.')+'</p>'+
+    '<div class="card">'+prod+'</div>'+
+    '<div class="grid2"><div class="card"><h3 style="margin-top:0">'+T('꺼져 있던 기간','Time inactive')+'</h3>'+offT+'</div>'+
+    '<div class="card"><h3 style="margin-top:0">'+T('투숙(체크아웃) 월 기준 R/N','Room nights by stay (checkout) month')+'</h3>'+
+    '<div class="chartbox"><canvas id="cStay"></canvas></div></div></div>';
+
+  destroy('cStay');
+  var lab=MONTHS.map(function(m){return m.slice(2).replace('-','.');});
+  charts.cStay=mkChart('cStay',{type:'line',
+    data:{labels:lab,datasets:ORDER.map(function(n){
+      var h=D.hotels[n],arr=[];
+      [['2025',0],['2026',12]].forEach(function(p){
+        var y=h.y[p[0]];for(var i=0;i<12;i++)arr[p[1]+i]=y?y.monthly[i].rn:0;});
+      return {label:n,data:arr,borderColor:COLOR[n],backgroundColor:COLOR[n]+'22',
+              borderWidth:2,tension:.25,pointRadius:2.2,pointHoverRadius:5};})},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,boxHeight:10,usePointStyle:true,pointStyle:'circle',padding:12}}},
+      scales:{y:{beginAtZero:true,title:{display:true,text:'Room Night'},grid:{color:'#eef1f6'}},
+        x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:12}}}}});
+}
+
+/* ─────────── s3 : 호텔 드릴다운 ─────────── */
+var curHotel=ORDER[0];
+function kpiRow(a,b){
+  function cell(lab,v25,v26,fmt,inv){
+    var d=pctd(v26,v25);
+    var cls=(d===null)?'':(((inv?-d:d)>=0)?'green':'red');
+    return '<div class="kpi '+cls+'"><div class="lab">'+lab+'</div><div class="val">'+fmt(v26)+'</div>'+
+           '<div class="note">2025 '+fmt(v25)+' · '+((d===null)?'—':dlt(d))+'</div></div>';
+  }
+  var f=function(v){return nf(v);};
+  var fl=function(v){return (v===null||v===undefined)?'—':v.toFixed(2);};
+  var fd=function(v){return (v===null||v===undefined)?'—':v.toFixed(1)+T('일',' d');};
+  var A=a||{bk:0,rn:0,ttv:0,adr:0,los:0,lead:0},B=b||{bk:0,rn:0,ttv:0,adr:0,los:0,lead:0};
+  return '<div class="kpis">'+
+    cell(T('예약 건수','Bookings'),A.bk,B.bk,f)+
+    cell('Room Night',A.rn,B.rn,f)+
+    cell('TTV (₫)',A.ttv,B.ttv,function(v){return nf(Math.round(v));})+
+    cell('ADR (₫)',A.adr,B.adr,f)+
+    cell('LOS',A.los,B.los,fl)+
+    cell(T('리드타임','Lead time'),A.lead,B.lead,fd)+'</div>';
+}
+function renderHotel(key){
+  curHotel=key;
+  var h=D.hotels[key], R=D.regions[h.region];
+  var a=h.y['2025'], b=h.y['2026'];
+  var rl=T('지역 평균','Market avg')+'('+h.region+')';
+  var html='<div class="card"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:baseline">'+
+    '<div><strong style="font-size:17px;color:var(--navy)">'+h.name+'</strong>'+
+    '<span class="mini" style="margin-left:10px">'+T('지역','Market')+' '+h.region+' · '+h.ctype+'</span></div>'+
+    '<div class="mini">'+T('2026 vs 2025 · 2026은 온더북','2026 vs 2025 · 2026 is on the books')+'</div></div>'+
+    kpiRow(a,b)+'</div>';
+
+  html+='<div class="card"><h3 style="margin-top:0">'+T('월별 판매현황 — 투숙(체크아웃) 월','Monthly production — by stay (checkout) month')+'</h3>'+
+    '<div class="chartbox"><canvas id="cMon"></canvas></div>'+
+    '<div class="mini">'+T('막대 = R/N · 선 = ADR(₫). 2025는 확정, 2026은 9/13 기준 온더북입니다.',
+      'Bars = room nights · line = ADR (₫). 2025 is final; 2026 is on the books as of 13 Sep.')+'</div></div>';
+
+  html+='<div class="grid2">'+
+    '<div class="card"><h3 style="margin-top:0">'+T('투숙기간 (LOS)','Length of stay')+' — 2026</h3>'+
+    distHTML(b&&b.losd,(R&&R.y['2026'])?R.y['2026'].losd:null,losLab(),'2026 '+key,rl)+
+    '<h3>2025</h3>'+distHTML(a&&a.losd,(R&&R.y['2025'])?R.y['2025'].losd:null,losLab(),'2025 '+key,rl)+'</div>'+
+    '<div class="card"><h3 style="margin-top:0">'+T('예약 리드타임','Booking lead time')+' — 2026</h3>'+
+    distHTML(b&&b.leadd,(R&&R.y['2026'])?R.y['2026'].leadd:null,leadLab(),'2026 '+key,rl)+
+    '<h3>2025</h3>'+distHTML(a&&a.leadd,(R&&R.y['2025'])?R.y['2025'].leadd:null,leadLab(),'2025 '+key,rl)+'</div></div>';
+
+  html+='<div class="grid2">'+
+    '<div class="card"><h3 style="margin-top:0">'+T('투숙객 국적','Guest nationality')+' — 2026</h3>'+
+    natHTML(b?b.nat:null,(R&&R.y['2026'])?R.y['2026'].nat:null,rl)+'</div>'+
+    '<div class="card"><h3 style="margin-top:0">'+T('투숙객 국적','Guest nationality')+' — 2025</h3>'+
+    natHTML(a?a.nat:null,(R&&R.y['2025'])?R.y['2025'].nat:null,rl)+'</div></div>';
+
+  html+='<div class="grid2">'+
+    '<div class="card"><h3 style="margin-top:0">'+T('룸타입','Room type')+'</h3>'+
+    tbl(h.roomtypes,[[T('룸타입','Room type'),function(r){return r.n;}],['R/N',function(r){return nf(r.rn);},'n'],
+      ['ADR',function(r){return nf(r.adr);},'n']])+'</div>'+
+    '<div class="card"><h3 style="margin-top:0">'+T('프로모션','Promotion')+'</h3>'+
+    tbl(h.promos,[[T('프로모션','Promotion'),function(r){return r.n==='(없음)'?T('(없음)','(none)'):r.n;}],
+      [T('건','Bk'),function(r){return nf(r.bk);},'n'],['R/N',function(r){return nf(r.rn);},'n']])+'</div></div>';
+
+  document.getElementById('hBody').innerHTML=html;
+
+  destroy('cMon');
+  var r25=a?a.monthly.map(function(x){return x.rn;}):new Array(12).fill(0);
+  var r26=b?b.monthly.map(function(x){return x.rn;}):new Array(12).fill(0);
+  var a26=b?b.monthly.map(function(x){return x.adr||null;}):new Array(12).fill(null);
+  charts.cMon=mkChart('cMon',{data:{labels:mLab(),datasets:[
+    {type:'bar',label:'2025 R/N',data:r25,backgroundColor:'#9BB0CE',borderRadius:4,order:3},
+    {type:'bar',label:'2026 R/N',data:r26,backgroundColor:COLOR[key],borderRadius:4,order:2},
+    {type:'line',label:'2026 ADR',data:a26,yAxisID:'y1',borderColor:'#E8A33D',backgroundColor:'#E8A33D',
+     borderWidth:2,tension:.25,pointRadius:3,spanGaps:true,order:1}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,boxHeight:10,usePointStyle:true,pointStyle:'circle',padding:12}},
+        tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+(c.parsed.y===null?'—':nf(c.parsed.y));}}}},
+      scales:{y:{beginAtZero:true,title:{display:true,text:'Room Night'},grid:{color:'#eef1f6'}},
+        y1:{beginAtZero:true,position:'right',title:{display:true,text:'ADR (₫)'},grid:{display:false},
+            ticks:{callback:function(v){return (v/1e6).toFixed(1)+'M';}}},
+        x:{grid:{display:false}}}}});
+}
+function renderS3(){
+  document.getElementById('s3').innerHTML=
+    '<h2>'+T('호텔 드릴다운','Property drilldown')+'</h2>'+
+    '<p class="lede">'+T('호텔을 선택하면 2025 · 2026 실적, 월별 판매현황, 투숙기간(LOS), 예약 리드타임, 투숙객 국적을 지역 평균과 함께 봅니다.',
+      'Select a property to see 2025 and 2026 production, monthly sales, length of stay, booking lead time and guest nationality against the market average.')+'</p>'+
+    '<div class="picker" id="hPick"></div><div id="hBody"></div>';
+  var p=document.getElementById('hPick');
+  ORDER.forEach(function(k){
+    var b=document.createElement('button');b.textContent=k;
+    if(k===curHotel)b.className='on';
+    b.onclick=function(){[].forEach.call(p.children,function(c){c.classList.remove('on');});
+      b.classList.add('on');renderHotel(k);};
+    p.appendChild(b);
+  });
+  renderHotel(curHotel);
+}
+
+/* ─────────── s5 : Suggestion ─────────── */
+function renderS5(){
+  var S=D.sugg;
+  function row(k){for(var i=0;i<S.los1.length;i++)if(S.los1[i].k===k)return S.los1[i];return null;}
+  function drow(k){for(var i=0;i<S.dow.length;i++)if(S.dow[i].k===k)return S.dow[i];return null;}
+
+  var ask='<table><tr><th>'+T('시설','Property')+'</th><th>'+T('요청','Request')+'</th><th>'+
+    T('적용 기간','Period')+'</th><th style="width:38%">'+T('핵심 근거','Why')+'</th></tr>'+
+    '<tr><td><strong>DN Riverfront</strong></td><td><strong>EB7DAYS</strong> '+T('또는','or')+' <strong>M2N</strong></td>'+
+      '<td>'+T('~ 12월','through Dec')+'</td><td>'+T('7일 이내 예약 60.0% · 주중 45.5%로 지역(54.1%)보다 약함',
+      '60.0% booked within 7 days · weekdays 45.5% vs market 54.1%')+'</td></tr>'+
+    '<tr><td rowspan="3"><strong>Hue + Quang Binh</strong></td><td><strong>EB7DAYS</strong> '+T('또는','or')+' <strong>M2N</strong></td>'+
+      '<td>'+T('~ 3월','through Mar')+'</td><td>'+T('1박 비중 90.5% / 78.3% — 2박 전환만으로 R/N +83% / +49%',
+      '1-night share 90.5% / 78.3% — converting to 2 nights lifts room nights +83% / +49%')+'</td></tr>'+
+    '<tr><td><strong>WEEKDAYS RATE</strong></td><td>'+T('상시','Ongoing')+'</td>'+
+      '<td>'+T('후에는 24박 중 월·화 투숙 0박','Hue: zero Monday and Tuesday nights out of 24')+'</td></tr>'+
+    '<tr><td><strong>'+T('취소 규정 완화','Improved cancellation')+'</strong></td>'+
+      '<td>'+T('9월 → 3월로 확대','Extend Sep → Mar')+'</td>'+
+      '<td>'+T('9~3월이 두 지역 최저 구간 · 후에 취소율 19.9%로 베트남 평균 이하',
+      'Sep–Mar is the low season in both markets · Hue cancellation 19.9%, below the Vietnam average')+'</td></tr></table>';
+
+  var t1='<table><tr><th>'+T('시설','Property')+'</th><th class="n">'+T('예약','Bookings')+'</th>'+
+    '<th class="n">'+T('1박 건수','1-night')+'</th><th class="n">'+T('1박 비중','1-night share')+'</th>'+
+    '<th class="n">'+T('지역 평균','Market avg')+'</th><th class="n">'+T('현재 R/N','Current R/N')+'</th>'+
+    '<th class="n">'+T('2박 전환 시','If 2 nights')+'</th><th class="n">'+T('증가','Uplift')+'</th></tr>';
+  ORDER.forEach(function(k){
+    var r=row(k),g=row('RGN:'+RG[k]);if(!r)return;
+    var up=(r.rnM2N-r.rn)/r.rn*100;
+    t1+='<tr><td><strong>'+k+'</strong></td><td class="n">'+nf(r.bk)+'</td><td class="n">'+nf(r.one)+'</td>'+
+      '<td class="n"><strong>'+r.onePct+'%</strong></td><td class="n">'+(g?g.onePct+'%':'—')+'</td>'+
+      '<td class="n">'+nf(r.rn)+'</td><td class="n">'+nf(r.rnM2N)+'</td><td class="n pos">+'+up.toFixed(0)+'%</td></tr>';
+  });
+  t1+='</table>';
+
+  var t2='<table><tr><th>'+T('시설','Property')+'</th><th class="n">'+T('7일 이내 예약','Booked within 7 days')+'</th>'+
+    '<th class="n">'+T('비중','Share')+'</th><th class="n">'+T('지역 평균','Market avg')+'</th>'+
+    '<th class="n">'+T('평균 리드타임','Avg lead time')+'</th><th class="n">'+T('2027 예약','2027 on books')+'</th></tr>';
+  ORDER.forEach(function(k){
+    var r=row(k),g=row('RGN:'+RG[k]);if(!r)return;
+    var y=D.hotels[k].y['2025'];
+    t2+='<tr><td><strong>'+k+'</strong></td><td class="n">'+nf(r.w7)+'</td>'+
+      '<td class="n"><strong>'+r.w7Pct+'%</strong></td><td class="n">'+(g?g.w7Pct+'%':'—')+'</td>'+
+      '<td class="n">'+(y?y.lead.toFixed(1):'—')+T('일','d')+'</td><td class="n neg">0</td></tr>';
+  });
+  t2+='</table>';
+
+  var DL=dowLab();
+  var t3='<table><tr><th>'+T('대상','Property')+'</th>';
+  DL.forEach(function(d){t3+='<th class="n">'+d+'</th>';});
+  t3+='<th class="n">'+T('주중(월~목)','Weekday (Mon–Thu)')+'</th><th class="n">'+T('지역 주중','Market weekday')+'</th></tr>';
+  ORDER.forEach(function(k){
+    var r=drow(k),g=drow('RGN:'+RG[k]);if(!r)return;
+    t3+='<tr><td><strong>'+k+'</strong></td>';
+    DOWK.forEach(function(d){t3+='<td class="n'+(r[d]===0?' neg':'')+'">'+r[d]+'</td>';});
+    var gap=g?(r.wd-g.wd):null;
+    t3+='<td class="n"><strong>'+r.wd+'%</strong></td><td class="n">'+(g?g.wd+'%':'—')+
+      (gap!==null?' <span class="'+(gap>=0?'pos':'neg')+'">('+(gap>=0?'+':'')+gap.toFixed(1)+'p)</span>':'')+'</td></tr>';
+  });
+  t3+='</table><div class="mini">'+T('숫자는 숙박일(박) 기준 · 빨간 0은 해당 요일 투숙이 전혀 없음',
+    'Figures are room nights by day of week · a red 0 means no stays at all on that day')+'</div>';
+
+  var t4='<table><tr><th>'+T('지역','Market')+'</th><th class="n">'+T('활성 예약','Active')+'</th>'+
+    '<th class="n">'+T('취소','Cancelled')+'</th><th class="n">'+T('취소율','Cancel rate')+'</th>'+
+    '<th class="n">'+T('베트남 평균','Vietnam avg')+'</th></tr>';
+  ['Da Nang','Hue','Dong Hoi'].forEach(function(rg){
+    var c=S.cancel[rg];if(!c)return;
+    t4+='<tr><td>'+rg+'</td><td class="n">'+nf(c.active)+'</td><td class="n">'+nf(c.cancelled)+'</td>'+
+      '<td class="n"><strong>'+c.rate+'%</strong></td><td class="n">'+S.cancelVN.rate+'%</td></tr>';
+  });
+  t4+='</table>';
+
+  var cur=0,aft=0;ORDER.forEach(function(k){var r=row(k);if(r){cur+=r.rn;aft+=r.rnM2N;}});
+  var kpi='<div class="kpis">'+
+    '<div class="kpi"><div class="lab">'+T('2025 실적 R/N','2025 actual room nights')+'</div><div class="val">'+nf(cur)+'</div>'+
+      '<div class="note">'+T('3개 시설 합계','Three properties')+'</div></div>'+
+    '<div class="kpi green"><div class="lab">'+T('M2N 적용 시','With M2N')+'</div><div class="val">'+nf(aft)+'</div>'+
+      '<div class="note">+'+nf(aft-cur)+' R/N</div></div>'+
+    '<div class="kpi green"><div class="lab">'+T('증가율','Uplift')+'</div><div class="val">+'+((aft-cur)/cur*100).toFixed(0)+'%</div>'+
+      '<div class="note">'+T('예약 건수 변화 없이','With no change in booking count')+'</div></div>'+
+    '<div class="kpi red"><div class="lab">'+T('2027 예약','2027 on books')+'</div><div class="val">0</div>'+
+      '<div class="note">'+T('지금 조건을 열어야 채워집니다','Only opens up if conditions change now')+'</div></div></div>';
+
+  document.getElementById('s5').innerHTML=
+    '<h2>'+T('Suggestion — 요청 사항','Suggestions')+'</h2>'+
+    '<p class="lede">'+T('이번 미팅에서 요청드리는 항목과, 각 항목이 왜 필요한지에 대한 실적 근거입니다.',
+      'What we would like to request, and the performance evidence behind each item.')+'</p>'+
+    '<div class="card hero"><div class="k">'+T('목적','Objective')+'</div>'+
+    '<h2>'+T('프로모션 확보 · 경쟁력 있는 요금 · 내년 객실 선점',
+      'Secure promotions · competitive rates · fill next year early')+'</h2>'+
+    '<p>'+T('세 시설 모두 2027년 예약이 아직 0건입니다. 지금 조건을 여는 것이 내년 물량을 미리 확보하는 유일한 방법입니다.',
+      'All three properties currently have zero bookings for 2027. Opening conditions now is the only way to secure next year\'s volume in advance.')+'</p></div>'+
+    '<div class="card">'+ask+'</div>'+
+
+    '<h2>'+T('근거 1 · M2N — 1박 편중이 너무 큽니다','Evidence 1 · M2N — too concentrated in single nights')+'</h2>'+
+    '<div class="card">'+t1+
+    '<div class="callout" style="margin-top:14px"><strong>'+
+      T('1박 예약이 2박으로만 바뀌어도 R/N은 이만큼 늘어납니다.','Converting one-night bookings to two nights alone lifts room nights by this much.')+
+      '</strong> '+T('최소 2박 조건에 인센티브를 붙이면 같은 예약 건수로 객실 판매량이 늘고, 하루짜리 회전에 드는 운영 비용도 줄어듭니다.',
+      'A minimum-two-night offer increases room nights sold on the same booking volume, and reduces the operating cost of single-night turnover.')+'</div>'+
+    '<div class="chartbox"><canvas id="cLos1"></canvas></div>'+
+    '<div class="mini">'+T('2025년 실적 기준 · 지역 평균과 비교','2025 actuals · compared with market average')+'</div></div>'+
+
+    '<h2>'+T('근거 2 · EB7DAYS — 예약이 너무 늦게 들어옵니다','Evidence 2 · EB7DAYS — bookings arrive too late')+'</h2>'+
+    '<div class="card">'+t2+
+    '<div class="callout" style="margin-top:14px">'+T('절반 이상이 투숙 7일 이내에 들어옵니다. 지금은 <strong>일찍 예약할 이유가 없습니다.</strong> 조기 예약에 혜택이 붙으면 수요가 앞으로 당겨지고, 호텔은 재고 계획을 더 일찍 세울 수 있습니다.',
+      'More than half of all bookings arrive within 7 days of stay. Right now <strong>there is no reason to book early.</strong> An early-booking benefit pulls demand forward and lets the hotel plan inventory sooner.')+'</div>'+
+    '<div class="callout good"><strong>'+
+      T('리드타임이 긴 지역일수록 단가가 높습니다.','The longer the lead time, the higher the rate.')+'</strong> '+
+      T('저희 베트남 데이터에서 푸꾸옥은 리드타임 중앙값 29일에 평균 ADR 2,608,648₫, 다낭은 8일에 1,385,828₫입니다. 나트랑은 17일에 1,372,761₫입니다. 일찍 잡히는 예약일수록 더 비싸게 팔립니다.',
+        'In our Vietnam data, Phu Quoc has a median lead time of 29 days at an average ADR of 2,608,648₫, while Da Nang books at 8 days for 1,385,828₫. Nha Trang sits between them at 17 days and 1,372,761₫. Bookings made earlier sell at higher rates.')+
+      ' '+T('EB7DAYS는 물량만 앞당기는 것이 아니라 단가도 함께 끌어올립니다.',
+        'EB7DAYS does not just pull volume forward — it lifts the rate as well.')+'</div>'+
+    '<div class="tscroll"><table><tr><th>'+T('지역','Market')+'</th>'+
+      '<th class="n">'+T('리드타임 중앙값','Median lead time')+'</th>'+
+      '<th class="n">'+T('평균 ADR (₫)','Average ADR (₫)')+'</th></tr>'+
+      D.top3['2026'].slice().sort(function(a,b){return a.leadMed-b.leadMed;}).map(function(x){
+        return '<tr><td><strong>'+x.r+'</strong></td><td class="n">'+x.leadMed+T('일','d')+
+               '</td><td class="n">'+nf(x.adr)+'</td></tr>';}).join('')+'</table></div>'+
+    '<div class="callout alert"><strong>'+T('세 시설 모두 2027년 예약이 0건입니다.','All three properties have zero bookings for 2027.')+'</strong> '+
+      T('반면 베트남 전체로는 2027년 선행예약이 전년 동시점 대비 <strong>3.2배</strong>, 1~3월 단가는 <strong>+9.5%</strong> 올랐습니다. 조기 수요는 이미 시장에 있는데 이 세 곳만 그 흐름 밖에 있습니다.',
+      'Across Vietnam, 2027 forward bookings are <strong>3.2x</strong> the same point last year and January–March rates are <strong>+9.5%</strong> higher. The early demand is already in the market; these three properties are outside it.')+'</div></div>'+
+
+    '<h2>'+T('근거 3 · WEEKDAYS RATE — 주중이 비어 있습니다','Evidence 3 · WEEKDAYS RATE — weekdays are empty')+'</h2>'+
+    '<div class="card"><div class="chartbox"><canvas id="cDow"></canvas></div>'+
+    '<div style="margin-top:12px">'+t3+'</div>'+
+    '<div class="callout" style="margin-top:12px"><strong>'+
+      T('후에는 집계된 24박 중 월요일·화요일 투숙이 한 박도 없습니다.','At Hue, not one of the 24 room nights recorded fell on a Monday or Tuesday.')+
+      '</strong> '+T('주중 전용 요금은 새 수요를 만드는 것이 아니라, 이미 비어 있는 날짜를 채우는 장치입니다.',
+      'A weekday rate does not create new demand — it fills dates that are already empty.')+'</div></div>'+
+
+    '<h2>'+T('근거 4 · 취소 규정 완화 — 9월에서 3월로','Evidence 4 · Cancellation policy — extend from Sep to Mar')+'</h2>'+
+    '<div class="grid2"><div class="card"><h3 style="margin-top:0">'+
+      T('9~3월은 두 지역의 최저 구간입니다','Sep–Mar is the low season in both markets')+'</h3>'+
+    '<div class="chartbox sm"><canvas id="cLow"></canvas></div>'+
+    '<div class="mini">'+T('지역 월별 R/N · 2025년 실적 기준','Market room nights by month · 2025 actuals')+'</div></div>'+
+    '<div class="card"><h3 style="margin-top:0">'+T('취소 리스크는 크지 않습니다','Cancellation risk is limited')+'</h3>'+t4+
+    '<div class="callout" style="margin-top:12px">'+T('취소 규정 완화는 <strong>조기 예약(EB7DAYS)과 한 쌍</strong>입니다. 몇 달 앞서 예약하라고 하면서 취소 여지를 주지 않으면 조기 예약은 생기지 않습니다. 비수기에 유연한 조건을 여는 것이 빈 객실을 미리 채우는 가장 빠른 방법입니다.',
+      'A better cancellation policy <strong>goes hand in hand with early booking (EB7DAYS)</strong>. Asking guests to commit months ahead without any flexibility simply prevents early bookings. Opening flexible terms in the low season is the fastest way to fill empty rooms in advance.')+'</div></div></div>'+
+
+    '<h2>'+T('기대 효과','Expected impact')+'</h2>'+
+    '<div class="card">'+kpi+'<div class="mini">'+
+      T('2025년 실적에 M2N만 적용했을 때의 단순 환산입니다. EB7DAYS · 주중 요금 · 취소 완화 효과는 포함하지 않았습니다.',
+        'A simple conversion applying M2N alone to 2025 actuals. It excludes any effect from EB7DAYS, weekday rates or improved cancellation terms.')+'</div></div>';
+
+  destroy('cLos1');
+  charts.cLos1=mkChart('cLos1',{type:'bar',
+    data:{labels:ORDER,datasets:[
+      {label:T('1박 비중 (시설)','1-night share (property)'),data:ORDER.map(function(k){var r=row(k);return r?r.onePct:0;}),
+       backgroundColor:'#C62828',borderRadius:4},
+      {label:T('1박 비중 (지역 평균)','1-night share (market avg)'),data:ORDER.map(function(k){var g=row('RGN:'+RG[k]);return g?g.onePct:0;}),
+       backgroundColor:'#9BB0CE',borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,boxHeight:10,usePointStyle:true,pointStyle:'circle',padding:12}}},
+      scales:{y:{beginAtZero:true,max:100,ticks:{callback:function(v){return v+'%';}},grid:{color:'#eef1f6'}},
+        x:{grid:{display:false}}}}});
+
+  destroy('cDow');
+  var gDN=drow('RGN:Da Nang');
+  charts.cDow=mkChart('cDow',{
+    data:{labels:DL,datasets:ORDER.map(function(k){
+      var r=drow(k),t=r?r.nights:0;
+      return {type:'bar',label:k,data:DOWK.map(function(d){return r&&t?+(r[d]/t*100).toFixed(1):0;}),
+              backgroundColor:COLOR[k],borderRadius:3};
+    }).concat([{type:'line',label:T('지역 평균(다낭)','Market avg (Da Nang)'),
+      data:DOWK.map(function(d){return +(gDN[d]/gDN.nights*100).toFixed(1);}),
+      borderColor:'#9aa6bb',borderDash:[5,4],borderWidth:2,pointRadius:0,tension:.25}])},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,boxHeight:10,usePointStyle:true,pointStyle:'circle',padding:12}},
+        tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+c.parsed.y+'%';}}}},
+      scales:{y:{beginAtZero:true,title:{display:true,text:T('숙박일 비중','Share of room nights')},
+        ticks:{callback:function(v){return v+'%';}},grid:{color:'#eef1f6'}},x:{grid:{display:false}}}}});
+
+  destroy('cLow');
+  charts.cLow=mkChart('cLow',{type:'line',
+    data:{labels:mLab(),datasets:[
+      {label:'Hue',data:S.rgnMonth['Hue']['2025'],borderColor:'#C62828',backgroundColor:'#C6282822',
+       borderWidth:2,tension:.3,pointRadius:2.5,fill:true},
+      {label:'Dong Hoi',data:S.rgnMonth['Dong Hoi']['2025'],borderColor:'#E8A33D',backgroundColor:'#E8A33D22',
+       borderWidth:2,tension:.3,pointRadius:2.5,fill:true}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,boxHeight:10,usePointStyle:true,pointStyle:'circle',padding:12}}},
+      scales:{y:{beginAtZero:true,title:{display:true,text:'Room Night'},grid:{color:'#eef1f6'}},x:{grid:{display:false}}}}});
+}
+
+/* ─────────── 프레임 ─────────── */
+var TABS=[['s2',['예약 현황','Booking activity']],['s3',['호텔 드릴다운','Property drilldown']],
+          ['s5',['Suggestion','Suggestions']]];
+var cur='s2';
+function renderAll(){
+  document.documentElement.lang=LANG;
+  document.getElementById('hTitle').textContent=T('Meliá 3개 호텔 · 판매 현황','Meliá · SCM Performance Review');
+  document.getElementById('hSub').innerHTML='Da Nang Riverfront · Hue · Quang Binh &nbsp;·&nbsp; '+
+    T('2026-09-13까지 생성된 예약 · 체크아웃 기준 · 취소 제외 · 통화 VND',
+      'Bookings created on or before 13 Sep 2026 · checkout basis · cancellations excluded · VND');
+  var nav=document.getElementById('nav');nav.innerHTML='';
+  TABS.forEach(function(t){
+    var b=document.createElement('button');b.textContent=T(t[1][0],t[1][1]);b.dataset.t=t[0];
+    if(t[0]===cur)b.className='on';
+    b.onclick=function(){show(t[0]);};
+    nav.appendChild(b);
+  });
+  document.getElementById('foot').innerHTML=
+    T('출처: OMH Global SCM 주간 예약 데이터(베트남, 2026-09-14 스냅샷) · 2026-09-13까지 생성된 예약 · 체크아웃 기준 · 취소 제외 · 통화 VND',
+      'Source: OMH Global SCM weekly booking data (Vietnam, snapshot 14 Sep 2026) · bookings created on or before 13 Sep 2026 · checkout basis · cancellations excluded · VND');
+  [['s2',renderS2],['s3',renderS3],['s5',renderS5]].forEach(function(r){
+    try{ r[1](); }
+    catch(e){
+      console.error('render failed: '+r[0]+' — '+e.message);
+      document.getElementById(r[0]).innerHTML=
+        '<div class="empty">'+T('이 화면을 그리는 중 오류가 발생했습니다.','This section failed to render.')+'</div>';
+    }
+  });
+  document.getElementById('btnPrint').textContent=SHOWALL?T('탭 보기','Tabs'):T('전체 보기','View all');
+  if(SHOWALL){ setShowAll(true); } else { show(cur,true); }
+}
+function show(id,skipScroll){
+  cur=id;
+  ['s2','s3','s5'].forEach(function(s){
+    document.getElementById(s).classList.toggle('on',s===id);});
+  [].forEach.call(document.querySelectorAll('nav button'),function(b){
+    b.classList.toggle('on',b.dataset.t===id);});
+  if(!skipScroll)window.scrollTo({top:0,behavior:'instant'});
+  setTimeout(function(){Object.keys(charts).forEach(function(k){
+    try{charts[k].resize();}catch(e){}});},50);
+}
+var SHOWALL=false;
+function setShowAll(on){
+  SHOWALL=on;
+  document.body.classList.toggle('showall',on);
+  document.getElementById('btnPrint').textContent=
+    on?T('탭 보기','Tabs'):T('전체 보기','View all');
+  if(on){
+    ['s2','s3','s5'].forEach(function(id){document.getElementById(id).classList.add('on');});
+  }else{ show(cur,true); }
+  /* 숨김 상태에서 만들어진 차트는 크기가 0이므로 다시 잡아준다 */
+  setTimeout(function(){
+    Object.keys(charts).forEach(function(k){try{charts[k].resize();}catch(e){}});
+  },60);
+}
+function setLang(l){
+  if(LANG===l)return;
+  LANG=l;
+  document.getElementById('bKo').classList.toggle('on',l==='ko');
+  document.getElementById('bEn').classList.toggle('on',l==='en');
+  renderAll();
+}
+document.getElementById('btnPrint').onclick=function(){setShowAll(!SHOWALL);};
+document.getElementById('bKo').onclick=function(){setLang('ko');};
+document.getElementById('bEn').onclick=function(){setLang('en');};
+document.addEventListener('keydown',function(e){
+  if(e.target.tagName==='INPUT')return;
+  var ids=TABS.map(function(t){return t[0];});
+  var i=ids.indexOf(cur);
+  if(e.key==='ArrowRight'&&i<ids.length-1)show(ids[i+1]);
+  if(e.key==='ArrowLeft'&&i>0)show(ids[i-1]);
+});
+renderAll();
+})();
+</script>
+</body>
+</html>
