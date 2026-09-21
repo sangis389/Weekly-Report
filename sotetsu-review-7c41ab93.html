@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -22,7 +22,7 @@ header{border-bottom:3px solid var(--navy);padding-bottom:14px;display:flex;
 h1{font-size:28px;line-height:1.25;margin:6px 0 5px;color:var(--navy);font-weight:800;letter-spacing:-.01em}
 .sub{font-size:12.5px;color:var(--mid)}
 .lang{display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap}
-.lang button{border:1px solid var(--line);background:var(--card);color:var(--mid);padding:5px 10px;
+.lang button{border:1px solid var(--line);background:var(--card);color:var(--mid);padding:5px 11px;
   border-radius:7px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .lang button.on{background:var(--navy);border-color:var(--navy);color:#fff}
 nav{position:sticky;top:0;z-index:30;background:var(--bg);padding:11px 0 9px;
@@ -192,7 +192,7 @@ body.showall section+section{margin-top:34px;padding-top:30px;border-top:2px sol
     <div class="sub" id="hSub"></div>
   </div>
   <div class="lang">
-    <button id="b_ko" class="on">KO</button><button id="b_en">EN</button><button id="b_ja">JA</button><button id="b_vi">VI</button>
+    <button id="b_en" class="on">EN</button><button id="b_ja">JA</button><button id="b_vi">VI</button>
     <button id="btnPrint" style="margin-left:6px"></button>
   </div>
 </header>
@@ -528,8 +528,8 @@ var D = {"meta": {"cut": "2026-09-20", "basis": "checkout", "cur": "VND", "losL"
 var E = {"q4": {"hotel": {"2025": {"bk": 8, "rn": 16, "adr": 3094447}, "2026": {"bk": 2, "rn": 2, "adr": 2778326}}, "rgn": {"2025": {"bk": 2568, "rn": 6492, "adr": 2029427}, "2026": {"bk": 1047, "rn": 3409, "adr": 2287243}}, "hotelM": {"2025": [0, 5, 11], "2026": [2, 0, 0]}, "rgnM": {"2025": [2295, 2151, 2046], "2026": [1334, 1104, 971]}}, "dow": {"hotel": {"n": [9, 6, 13, 12, 18, 27, 14], "nights": 99, "adr": [2926822, 4469155, 3440867, 2682841, 2727574, 2654643, 2578918], "wdPct": 58.6, "wePct": 41.4, "wdAdr": 3089276, "weAdr": 2628786, "wdN": 58, "weN": 41}, "rgn": {"n": [2398, 2418, 2571, 2821, 3088, 3056, 2409], "nights": 18761, "adr": [2403871, 2435228, 2464119, 2416643, 2396175, 2361664, 2388892], "wdPct": 70.9, "wePct": 29.1, "wdAdr": 2422146, "weAdr": 2373666, "wdN": 13296, "weN": 5465}, "labels": ["월", "화", "수", "목", "금", "토", "일"]}, "adr": {"hotelM": [3053089, 2628355, 3040605, 3058355, 2286096, 3159389, 2590186, 2746759, 2557698, 2778326, 0, 0], "rgnM": [2151015, 2158519, 2492152, 2210315, 2197474, 1992143, 2107995, 2112561, 1964250, 2223524, 2335048, 2320430], "hotel": 2732936, "rgn": 2169882, "hotel25": 2877825, "rgn25": 1841417, "peers": {"n": 122, "below": 97, "pct": 79.5, "p25": 1078537, "p50": 1665418, "p75": 2542351}}, "fwd": {"vn": {"ny": {"bk": 1170, "rn": 4439, "adr": 2106881, "hotels": 156}, "py": {"bk": 303, "rn": 1095, "adr": 2301584, "hotels": 70}}, "rgn": {"ny": {"bk": 237, "rn": 835, "adr": 3116062, "hotels": 28}, "py": {"bk": 34, "rn": 96, "adr": 2656561, "hotels": 15}}, "hotel": {"ny": {"bk": 0, "rn": 0, "adr": 0, "hotels": 0}, "py": {"bk": 0, "rn": 0, "adr": 0, "hotels": 0}}, "q1": {"y27": 2087641, "y26": 2360267}}, "m2n": {"bk": 59, "one": 35, "onePct": 59.3, "rn": 105, "gain": 35, "rgnOnePct": 36.3}, "ramp": {"2025": {"months": 5, "rn": 28, "first": "2025-08-03", "perM": 5.6}, "2026": {"months": 9, "rn": 103, "perM": 11.4}}};
 (function(){
 "use strict";
-var LANG='ko';
-var LANGS=[['ko','KO'],['en','EN'],['ja','JA'],['vi','VI']];
+var LANG='en';
+var LANGS=[['en','EN'],['ja','JA'],['vi','VI']];
 /* 한국어 원문이 키입니다. ja·vi 에 없는 문구는 영어로 내려갑니다. */
 function T(ko,en){
   if(LANG==='ko')return ko;
