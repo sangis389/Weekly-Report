@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sotetsu Grand Fresa Saigon · SCM Performance Review</title>
+<style>
+:root{
+  color-scheme: light;
+  --navy:#1F3864; --blue:#2E5496; --accent:#4472C4;
+  --ink:#1a1f2b; --mid:#5a6475; --line:#e3e7ee; --bg:#f7f8fb; --card:#fff;
+  --on:#2E7D32; --off:#C62828; --warn:#E8A33D; --y25:#9BB0CE; --y26:#2E5496;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Malgun Gothic","Segoe UI",Roboto,sans-serif;
+  font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1240px;margin:0 auto;padding:26px 22px 80px}
+header{border-bottom:3px solid var(--navy);padding-bottom:14px;display:flex;
+  justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.eyebrow{font-size:11px;letter-spacing:.14em;font-weight:700;color:var(--mid);text-transform:uppercase}
+h1{font-size:28px;line-height:1.25;margin:6px 0 5px;color:var(--navy);font-weight:800;letter-spacing:-.01em}
+.sub{font-size:12.5px;color:var(--mid)}
+.lang{display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap}
+.lang button{border:1px solid var(--line);background:var(--card);color:var(--mid);padding:5px 10px;
+  border-radius:7px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.lang button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+nav{position:sticky;top:0;z-index:30;background:var(--bg);padding:11px 0 9px;
+  border-bottom:1px solid var(--line);margin-bottom:22px;display:flex;gap:6px;flex-wrap:wrap}
+nav button{border:1px solid var(--line);background:var(--card);color:var(--mid);
+  padding:7px 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:.12s}
+nav button:hover{border-color:var(--accent);color:var(--blue)}
+nav button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+section{display:none;animation:fade .18s ease}
+section.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+h2{font-size:20px;color:var(--navy);margin:32px 0 4px;font-weight:750;letter-spacing:-.01em}
+h2:first-child{margin-top:0}
+h3{font-size:14.5px;color:var(--blue);margin:22px 0 8px;font-weight:700}
+.lede{font-size:13.5px;color:var(--mid);margin:0 0 16px}
+p{margin:0 0 11px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:13px 0;
+  box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.hero{background:linear-gradient(135deg,#1F3864,#2E5496);color:#fff;border:none;padding:24px 26px}
+.hero .k{font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.75;font-weight:700}
+.hero h2{color:#fff;margin:8px 0 9px;font-size:23px;line-height:1.35}
+.hero p{opacity:.92;margin:0;font-size:14.5px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(152px,1fr));gap:10px;margin:14px 0 4px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:14px 16px}
+.kpi .lab{font-size:11px;color:var(--mid);font-weight:650}
+.kpi .val{font-size:24px;font-weight:800;color:var(--navy);margin:4px 0 1px;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums}
+.kpi .note{font-size:11px;color:var(--mid)}
+.kpi.red .val{color:var(--off)} .kpi.green .val{color:var(--on)} .kpi.warn .val{color:var(--warn)}
+table{width:100%;border-collapse:collapse;font-size:13px;margin:9px 0 4px}
+th{background:var(--navy);color:#fff;font-weight:650;text-align:left;padding:8px 10px;font-size:12px;
+  border:1px solid #1F3864;white-space:normal;word-break:keep-all}
+.tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tscroll table{min-width:620px}
+td .sub-med{color:#9aa6bb;font-weight:400;white-space:nowrap}
+td{padding:7px 10px;border:1px solid var(--line);font-variant-numeric:tabular-nums}
+td.n,th.n{text-align:right}
+tbody tr:nth-child(even){background:#fbfcfe}
+.pos{color:var(--on);font-weight:700} .neg{color:var(--off);font-weight:700}
+.hm{overflow-x:auto;margin:10px 0 4px}
+.hm table{font-size:12px;min-width:860px}
+.hm th{padding:6px 4px;text-align:center;font-size:11px}
+.hm th.rowh{text-align:left;min-width:150px;position:sticky;left:0;z-index:2}
+.hm td{text-align:center;padding:8px 3px;font-weight:700;border-color:#eef1f6}
+.hm td.rowh{text-align:left;font-weight:650;background:#fff;position:sticky;left:0;z-index:1;border-right:2px solid var(--line)}
+.z0{background:#fff;color:#ccd2dd}.z1{background:#dbe5f5;color:#2b3a55}.z2{background:#b3c9ec;color:#1b2a45}
+.z3{background:#7ea3dd;color:#fff}.z4{background:#4472C4;color:#fff}.z5{background:#25457f;color:#fff}
+.legend{display:flex;gap:13px;align-items:center;font-size:11.5px;color:var(--mid);margin-top:7px;flex-wrap:wrap}
+.legend i{display:inline-block;width:17px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px;border:1px solid #e0e5ee}
+.tl-row{display:grid;grid-template-columns:152px 1fr;gap:11px;align-items:center;margin-bottom:8px}
+.tl-name{font-size:12.5px;font-weight:700;color:var(--navy);text-align:right}
+.tl-bar{position:relative;height:26px;background:#f0f3f8;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.tl-seg{position:absolute;top:0;bottom:0;border-radius:4px;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;min-width:14px}
+.tl-note{display:grid;grid-template-columns:152px 1fr;gap:11px;font-size:11.5px;color:var(--mid);margin:2px 0 8px}
+.tl-note b{color:var(--ink);font-weight:650}
+.tl-axis{display:grid;grid-template-columns:152px 1fr;gap:11px;font-size:10px;color:var(--mid);margin-top:2px}
+.tl-months{display:grid;grid-template-columns:repeat(24,1fr);text-align:center}
+.chartbox{position:relative;height:280px;margin:10px 0 4px}
+.chartbox.sm{height:230px}
+.callout{background:#eef4ff;border:1px solid #cfdefc;border-left:4px solid var(--accent);border-radius:8px;
+  padding:13px 17px;margin:11px 0;font-size:13.5px}
+.callout strong{color:var(--navy)}
+.alert{background:#fdf0ef;border-color:#f3cfcb;border-left-color:var(--off)}
+.good{background:#eef7ef;border-color:#c9e3cb;border-left-color:var(--on)}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid}
+.pill.on{background:#e8f5e9;color:#1b5e20;border-color:#bcdfbf}
+.pill.off{background:#fdecea;color:#8e1b14;border-color:#f2c9c4}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.picker{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 16px}
+.picker button{border:1px solid var(--line);background:var(--card);color:var(--mid);padding:9px 16px;
+  border-radius:9px;font:inherit;font-size:13.5px;font-weight:650;cursor:pointer;transition:.12s}
+.picker button:hover{border-color:var(--accent);color:var(--blue)}
+.picker button.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.dist{margin:6px 0}
+.dist-row{display:grid;grid-template-columns:82px 1fr 96px;gap:9px;align-items:center;margin-bottom:5px;font-size:12.5px}
+.dist-lab{color:var(--mid);text-align:right;font-weight:600}
+.dist-track{position:relative;height:20px;background:#f2f5f9;border-radius:4px;overflow:hidden}
+.dist-fill{position:absolute;left:0;top:0;bottom:0;background:var(--y26);border-radius:4px}
+.dist-ghost{position:absolute;left:0;top:0;bottom:0;border:1.5px dashed #9aa6bb;border-radius:4px;
+  background:rgba(154,166,187,.10)}
+.dist-val{font-size:12px;color:var(--mid);font-variant-numeric:tabular-nums}
+.swatch{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.mini{font-size:11.5px;color:var(--mid);margin-top:6px}
+.empty{padding:26px;text-align:center;color:var(--mid);font-size:13.5px;background:#fafbfd;border-radius:8px;
+  border:1px dashed var(--line)}
+@media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr}.tl-row,.tl-axis{grid-template-columns:96px 1fr}h1{font-size:21px}}
+footer{margin-top:40px;padding-top:15px;border-top:1px solid var(--line);font-size:11.5px;color:var(--mid);line-height:1.7}
+body.showall section{display:block;animation:none}
+body.showall nav{display:none}
+body.showall section+section{margin-top:34px;padding-top:30px;border-top:2px solid var(--line)}
+@media print{
+  body{background:#fff}
+  .wrap{max-width:none;padding:0}
+  nav,.lang,#btnPrint{display:none!important}
+  section{display:block!important;animation:none}
+  section+section{break-before:page;margin-top:0;padding-top:0;border-top:none}
+  .card,.kpi,table,.chartbox{break-inside:avoid}
+  .card{box-shadow:none}
+  a{text-decoration:none;color:inherit}
+}
+/* ─────────── 모바일 대응 ─────────── */
+/* 표 폭 규칙 — fluid 는 그대로 줄바꿈, wide 는 열이 많아 더 넓게 */
+.tscroll table.fluid{min-width:0}
+.tscroll table.wide{min-width:760px}
+.tscroll::-webkit-scrollbar{height:7px}
+.tscroll::-webkit-scrollbar-track{background:#f1f4f9;border-radius:4px}
+.tscroll::-webkit-scrollbar-thumb{background:#c3ccdb;border-radius:4px}
+
+@media(max-width:760px){
+  .wrap{padding:16px 12px 56px}
+  header{padding-bottom:11px;gap:9px}
+  h1{font-size:18.5px;line-height:1.3}
+  .eyebrow{font-size:9.5px;letter-spacing:.1em}
+  .sub{font-size:11.5px}
+  .lang{width:100%;justify-content:flex-start}
+  .lang button{padding:5px 11px;font-size:11.5px}
+  nav{padding:9px 0 7px;margin-bottom:16px;gap:5px}
+  nav button{padding:7px 13px;font-size:12.5px}
+  h2{font-size:17px;margin:24px 0 4px}
+  h3{font-size:13.5px;margin:18px 0 7px}
+  .lede{font-size:12.5px;margin-bottom:13px}
+  .card{padding:14px 13px;border-radius:10px;margin:11px 0}
+  .hero{padding:18px 16px}
+  .hero h2{font-size:18px;line-height:1.4}
+  .hero p{font-size:13px}
+  .kpis{grid-template-columns:repeat(2,1fr);gap:8px}
+  .kpi{padding:11px 12px;border-radius:9px}
+  .kpi .val{font-size:19px}
+  .kpi .lab{font-size:10.5px}
+  .kpi .note{font-size:10px;line-height:1.45}
+  .chartbox{height:235px}
+  .chartbox.sm{height:200px}
+  table{font-size:12px}
+  th{padding:7px 8px;font-size:11px}
+  td{padding:6px 8px}
+  .tscroll table{min-width:580px}
+  .dist-row{grid-template-columns:56px 1fr 78px;gap:6px;font-size:11.5px}
+  .dist-lab{font-size:11px}
+  .dist-track{height:18px}
+  .dist-val{font-size:10px}
+  .callout{padding:11px 13px;font-size:12.5px;line-height:1.62}
+  .mini{font-size:11px;line-height:1.55}
+  .swatch{width:10px;height:10px}
+  footer{font-size:10.5px;margin-top:28px}
+  .pill{font-size:10px;padding:2px 7px}
+  body.showall section+section{margin-top:24px;padding-top:22px}
+}
+/* 아주 좁은 화면 (360px 안팎) */
+@media(max-width:400px){
+  .wrap{padding:14px 10px 48px}
+  h1{font-size:17px}
+  .kpis{grid-template-columns:1fr 1fr;gap:7px}
+  .kpi .val{font-size:17.5px}
+  .chartbox{height:210px}
+  .dist-row{grid-template-columns:48px 1fr 70px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <div class="eyebrow">OHMYHOTEL · GLOBAL SCM · VIETNAM</div>
+    <h1 id="hTitle"></h1>
+    <div class="sub" id="hSub"></div>
+  </div>
+  <div class="lang">
+    <button id="b_ko" class="on">KO</button><button id="b_en">EN</button><button id="b_ja">JA</button><button id="b_vi">VI</button>
+    <button id="btnPrint" style="margin-left:6px"></button>
+  </div>
+</header>
+<nav id="nav"></nav>
+<section id="s2"></section>
+<section id="s3"></section>
+<section id="s5"></section>
+<footer id="foot"></footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<script>
+/* 한국어 원문을 키로 하는 일본어 · 베트남어 사전. 빠진 항목은 영어로 대체됩니다. */
+var TR={};
+TR.ja={
+"데이터 없음":"データなし",
+"건":"件",
+"평균":"平均",
+"중앙값":"中央値",
+"국적":"国籍",
+"비중":"構成比",
+"차이":"差",
+"본 호텔 소재 시장":"当ホテルの所在市場",
+"일":"日",
+"OMH 베트남 — 주요 지역 비중":"OMHベトナム — 主要エリア構成比",
+"지역":"エリア",
+"R/N 비중":"ルームナイト構成比",
+"예약 비중":"予約構成比",
+"평균 ADR (₫)":"平均ADR（₫）",
+"평균 LOS":"平均宿泊日数",
+"리드타임":"リードタイム",
+"구간":"期間",
+"가동 개월":"稼働月数",
+"월평균 R/N":"月平均ルームナイト",
+"8월 판매 개시 ~ 12월":"8月販売開始〜12月",
+"2025년 8월 3일 첫 체크아웃으로 판매를 시작했기 때문에 2025년은 5개월치입니다. 연간 총합끼리 비교하면 의미가 없어 가동 개월 수로 나눴습니다.":"2025年8月3日の初チェックアウトから販売を開始したため、2025年は5か月分です。年間合計同士の比較では意味がないため、稼働月数で割っています。",
+"작년 Q4 · 9/20 시점":"昨年Q4・9月20日時点",
+"R/N — 최종은":"ルームナイト — 最終は",
+"올해 Q4 · 9/20 시점":"今年Q4・9月20日時点",
+"R/N — 작년 동시점보다 앞섬":"ルームナイト — 昨年同時点を上回る",
+"호치민 시장 Q4 페이스":"ホーチミン市場Q4ペース",
+"Q4 판매 중인 호치민 호텔":"Q4を販売中のホーチミンのホテル",
+"본 호텔 점유":"当ホテル保有",
+"판매 개시 이후 추이":"販売開始以降の推移",
+"2025년 8월에 OMH 판매를 시작한 시설이므로, 연간 총합이 아니라 가동 개월 기준으로 봅니다.":"2025年8月にOMHでの販売を開始した施設のため、年間合計ではなく稼働月ベースで見ます。",
+"월평균 판매량이 두 배가 됐습니다.":"月平均の販売量が2倍になりました。",
+"5.6박에서 11.4박으로 올라섰고, 예약 건수도 18건에서 59건으로 늘었습니다. 시작 단계는 지났다는 뜻입니다.":"5.6泊から11.4泊に伸び、予約件数も18件から59件に増えました。立ち上げ段階は過ぎたということです。",
+"투숙(체크아웃) 월 기준 판매":"宿泊（チェックアウト）月別の販売",
+"본 호텔":"当ホテル",
+"호치민 시장 전체":"ホーチミン市場全体",
+"시장은 연중 고르게 팔리고 4분기에도 크게 떨어지지 않습니다.":"市場は通年で平準的に売れており、第4四半期も大きくは落ちません。",
+"4분기 예약 창이 지금 열려 있습니다":"第4四半期の予約ウィンドウは今開いています",
+"작년 이 호텔의 4분기 16박은 전부 9월 20일 이후에 들어온 예약이었습니다. 즉 4분기는 지금부터 만들어집니다.":"昨年、当ホテルの第4四半期16泊はすべて9月20日以降に入った予約でした。つまり第4四半期はこれから作られます。",
+"시장은 작년 같은 시점의 두 배로 차 있습니다.":"市場は昨年同時点の2倍まで埋まっています。",
+"호치민 4분기 온더북은 1,642박 → 3,409박(+108%)이고, 이미 88개 호텔이 4분기를 팔고 있습니다. 작년 이 호텔은 4분기를 16박 잡았는데, 그때 ADR은 3,094,447₫으로 호치민 4분기 시장 평균 2,029,427₫보다 52% 높았습니다.":"ホーチミンの第4四半期のオンザブックは1,642泊→3,409泊（+108%）となり、すでに88ホテルが第4四半期を販売しています。昨年、当ホテルは第4四半期に16泊を獲得しましたが、その際のADRは3,094,447₫で、ホーチミン第4四半期の市場平均2,029,427₫より52%高い水準でした。",
+"예약 건수":"予約件数",
+"지역 평균":"エリア平均",
+"2026 vs 2025 · 2026은 온더북 · 2025는 8월 판매 개시":"2026 vs 2025・2026はオンザブック・2025は8月販売開始",
+"2025년은 8월 3일 첫 체크아웃 이후 5개월치입니다. 증감률은 참고용이며, 가동 개월 기준 비교는 예약 현황 탭에 있습니다.":"2025年は8月3日の初チェックアウト以降の5か月分です。増減率は参考値であり、稼働月ベースの比較は「予約状況」タブにあります。",
+"월별 판매현황 — 투숙(체크아웃) 월":"月別販売状況 — 宿泊（チェックアウト）月",
+"막대 = R/N · 선 = ADR(₫). 2025는 확정, 2026은 9/20 기준 온더북입니다.":"棒＝ルームナイト・線＝ADR（₫）。2025年は確定、2026年は9月20日時点のオンザブックです。",
+"투숙기간 (LOS)":"宿泊日数（LOS）",
+"예약 리드타임":"予約リードタイム",
+"투숙객 국적":"宿泊者の国籍",
+"일본인 비중이 시장의 4배입니다.":"日本人比率が市場の4倍です。",
+"일본 16.2% vs 호치민 시장 3.9%. 브랜드 인지도가 실제 예약으로 나타나고 있습니다.":"日本16.2%に対しホーチミン市場は3.9%。ブランド認知が実際の予約として表れています。",
+"룸타입":"ルームタイプ",
+"프로모션":"プロモーション",
+"(없음)":"（なし）",
+"올해 59건 중 58건이 같은 프로모션 하나(-10% 상시 딜)에 실려 있습니다. 조기예약·연박·평일 같은 <strong>조건형 프로모션이 하나도 없습니다.</strong>":"今年の59件のうち58件が同一のプロモーション1本（-10%の常時ディール）に乗っています。早期予約・連泊・平日といった<strong>条件型プロモーションが一つもありません。</strong>",
+"호텔 드릴다운":"ホテル詳細",
+"2025 · 2026 실적, 월별 판매현황, 투숙기간(LOS), 예약 리드타임, 투숙객 국적을 호치민 시장 평균과 함께 봅니다.":"2025年・2026年の実績、月別販売状況、宿泊日数（LOS）、予約リードタイム、宿泊者の国籍を、ホーチミン市場平均と並べて確認します。",
+"요청":"ご依頼事項",
+"적용 기간":"適用期間",
+"핵심 근거":"根拠",
+"동계 프로모션":"冬季プロモーション",
+"또는":"または",
+"10월 ~ 2월":"10月〜2月",
+"호치민 4분기 온더북이 작년 같은 시점의 2배(1,642 → 3,409박)이고 88개 호텔이 이미 판매 중입니다. 작년 이 호텔의 4분기 16박은 전부 9/20 이후 예약이었습니다 — 창은 지금 열려 있습니다.":"ホーチミンの第4四半期オンザブックは昨年同時点の2倍（1,642→3,409泊）で、88ホテルがすでに販売中です。昨年、当ホテルの第4四半期16泊はすべて9月20日以降の予約でした — ウィンドウは今開いています。",
+"월~목":"月〜木",
+"상시":"通年",
+"주중 ADR 3,089,276₫ — 시장 주중 평균 2,422,146₫보다 27.5% 높습니다. 그 결과 주중 숙박 비중이 58.6%로 시장 70.9%에 크게 못 미칩니다. 호치민은 평일 비즈니스 수요가 주도하는 시장입니다.":"平日ADRは3,089,276₫で、市場の平日平均2,422,146₫より27.5%高い水準です。その結果、平日の宿泊比率は58.6%にとどまり、市場の70.9%を大きく下回っています。ホーチミンは平日のビジネス需要が牽引する市場です。",
+"2027 요금·재고 선등록":"2027年料金・在庫の事前登録",
+"10월 내":"10月中",
+"호치민 2027년 온더북은 835박(작년 동시점 96박, +770%), 28개 호텔이 이미 등록했습니다. 본 호텔은 0박입니다. 2027년 1분기 ADR은 3,080,489₫로 작년 같은 시점보다 오히려 17.9% 높습니다 — 할인 요청이 아니라 상승장에 올라타는 문제입니다.":"ホーチミンの2027年オンザブックは835泊（昨年同時点96泊、+770%）で、28ホテルがすでに登録済みです。当ホテルは0泊です。2027年第1四半期のADRは3,080,489₫と、昨年同時点よりむしろ17.9%高くなっています — 値引きのお願いではなく、上昇局面に乗るかどうかの話です。",
+"계약 형태가 Dynamic Rate이므로 순액 요금 재협상이 아니라 조건부 프로모션과 2027년 요금 등록을 요청드립니다.":"契約形態がDynamic Rateのため、ネット料金の再交渉ではなく、条件付きプロモーションと2027年料金の登録をお願いしております。",
+"구분":"区分",
+"10월":"10月",
+"11월":"11月",
+"12월":"12月",
+"Q4 합계":"Q4合計",
+"본 호텔 2025 (확정)":"当ホテル 2025（確定）",
+"본 호텔 2026 (9/20 온더북)":"当ホテル 2026（9/20オンザブック）",
+"호치민 소테츠 주변 시장 2025 (확정)":"ホーチミン ソテツ周辺市場 2025（確定）",
+"호치민 소테츠 주변 시장 2026 (9/20 온더북)":"ホーチミン ソテツ周辺市場 2026（9/20オンザブック）",
+"단위 R/N. 2026년 수치는 아직 채워지는 중이며, 작년 호치민 4분기도 9/20 시점에는 1,642박(최종 6,492박)이었습니다.":"単位はルームナイト。2026年の数値はまだ積み上がっている途中で、昨年のホーチミン第4四半期も9月20日時点では1,642泊（最終6,492泊）でした。",
+"주중 비중":"平日比率",
+"본 호텔 (박)":"当ホテル（泊）",
+"본 호텔 요일별 ADR":"当ホテルの曜日別ADR",
+"호치민 시장 요일별 ADR":"ホーチミン市場の曜日別ADR",
+"호치민 시장 숙박 비중":"ホーチミン市場の宿泊比率",
+"본 호텔 ADR":"当ホテルADR",
+"시장 평균 대비":"市場平均比",
+"호치민 시장 평균":"ホーチミン市場平均",
+"상위25%":"上位25%",
+"호치민 내 순위":"ホーチミン内の位置",
+"상위":"上位",
+"개 호텔 중 ":"ホテル中 ",
+"곳이 더 저렴":"軒がより低価格",
+"작년 대비 격차":"昨年比の乖離",
+"격차는 이미 절반으로 줄었습니다":"乖離はすでに半減しています",
+"작년 동시점":"昨年同時点",
+"현재 (2027)":"現在（2027）",
+"증감":"増減",
+"호치민 R/N":"ホーチミンのルームナイト",
+"호치민 등록 호텔 수":"ホーチミンの登録ホテル数",
+"베트남 전체 R/N":"ベトナム全体のルームナイト",
+"본 호텔 R/N":"当ホテル",
+"요금 미등록":"料金未登録",
+"두 열 모두 각 연도 9월 20일까지 생성된 예약 기준입니다.":"いずれの列も各年9月20日までに作成された予約が対象です。",
+"2026 현재 R/N":"2026年 現在のルームナイト",
+"건 · 1박 비중 ":"件・1泊比率 ",
+"M2N 적용 시":"M2N適用時",
+"증가율":"増加率",
+"예약 건수 변화 없이":"予約件数を変えずに",
+"2027 예약":"2027年の予約",
+"지금 등록해야 채워집니다":"今登録して初めて埋まります",
+"Suggestion — 요청 사항":"Suggestion — ご依頼事項",
+"이번 미팅에서 요청드리는 항목과, 각 항목이 왜 필요한지에 대한 실적 근거입니다.":"今回のミーティングでお願いしたい項目と、それぞれがなぜ必要かを示す実績根拠です。",
+"목적":"目的",
+"4분기·동계 물량 확보 · 평일 채우기 · 2027년 선점":"第4四半期・冬季の数量確保／平日を埋める／2027年の先行確保",
+"판매 첫 해를 지나 월평균 판매량이 두 배가 됐습니다. 지금 필요한 것은 요금 인하가 아니라, 비어 있는 구간(4분기·평일)을 여는 조건과 2027년 요금 등록입니다.":"販売初年度を終え、月平均の販売量は2倍になりました。いま必要なのは料金の引き下げではなく、空いている枠（第4四半期・平日）を開く条件と、2027年料金の登録です。",
+"근거 1 · 4분기 — 시장은 두 배로 차 있는데 본 호텔은 비어 있습니다":"根拠1・第4四半期 — 市場は2倍埋まっているのに当ホテルは空いています",
+"작년 4분기는 전부 9/20 이후에 팔렸습니다.":"昨年の第4四半期はすべて9月20日以降に売れました。",
+"즉 지금이 4분기를 만드는 시점입니다. 다만 작년에는 아무 조건 없이 16박을 잡았고, 그 사이 시장의 4분기 경쟁 강도는 두 배가 됐습니다. 같은 방식으로는 같은 결과가 나오지 않습니다.":"つまり今が第4四半期を作る時期です。ただし昨年は何の条件もなく16泊を獲得しましたが、その間に市場の第4四半期の競争は2倍に強まりました。同じやり方では同じ結果になりません。",
+"호치민 시장 월별 R/N · 회색은 2025년 확정, 파란색은 2026년 온더북":"ホーチミン市場の月別ルームナイト・グレーは2025年確定、ブルーは2026年オンザブック",
+"근거 2 · 평일 — 시장에서 가장 큰 수요를 놓치고 있습니다":"根拠2・平日 — 市場で最も大きい需要を取りこぼしています",
+"평일이 주말보다 비쌉니다.":"平日が週末より高く設定されています。",
+"본 호텔 주중 ADR은 3,089,276₫, 주말은 2,628,786₫입니다. 시장은 주중 2,422,146₫ · 주말 2,373,666₫으로 거의 차이가 없습니다. 호치민 숙박의 70.9%가 월~금에 발생하는데 본 호텔은 58.6%에 그칩니다 — 가장 큰 수요층에 가장 높은 가격을 제시하고 있는 구조입니다.":"当ホテルの平日ADRは3,089,276₫、週末は2,628,786₫です。市場は平日2,422,146₫・週末2,373,666₫とほぼ差がありません。ホーチミンの宿泊の70.9%が月〜金に発生するのに対し、当ホテルは58.6%にとどまります — 最も大きい需要層に最も高い価格を提示している構図です。",
+"주중 요금은 새 수요를 만드는 것이 아니라 <strong>이미 시장에 있는 수요를 가져오는 장치</strong>입니다. 월~목 전용 요금만으로도 시장 평균 수준의 주중 비중에 접근할 수 있습니다.":"平日料金は新しい需要を作るものではなく、<strong>すでに市場にある需要を取りに行く仕掛け</strong>です。月〜木限定の料金だけでも、市場平均並みの平日比率に近づけます。",
+"근거 3 · 요금 포지션 — 12개월 모두 시장 위에 있습니다":"根拠3・料金ポジション — 12か月すべてで市場を上回っています",
+"먼저 인정할 부분이 있습니다.":"まず評価すべき点があります。",
+"작년 이 호텔의 ADR은 시장 평균보다 56% 높았는데 올해는 26%까지 좁혔습니다. 그 사이 판매량이 두 배가 된 것은 우연이 아닙니다. 요청드리는 것은 추가 인하가 아니라, 남은 격차를 <strong>상시 인하가 아닌 조건부 프로모션으로</strong> 메우자는 것입니다.":"昨年、当ホテルのADRは市場平均より56%高い水準でしたが、今年は26%まで縮まりました。その間に販売量が2倍になったのは偶然ではありません。お願いしたいのはさらなる値下げではなく、残る乖離を<strong>常時の値下げではなく条件付きプロモーションで</strong>埋めることです。",
+"막대 = 본 호텔 월별 ADR · 선 = 호치민 시장 월별 ADR (2026년 온더북 기준)":"棒＝当ホテルの月別ADR・線＝ホーチミン市場の月別ADR（2026年オンザブック基準）",
+"근거 4 · 2027년 — 시장은 이미 팔고 있습니다":"根拠4・2027年 — 市場はすでに販売しています",
+"2027년 1분기는 작년보다 17.9% 높은 단가에 팔리고 있습니다.":"2027年第1四半期は昨年より17.9%高い単価で売れています。",
+"호치민 2027년 1분기 온더북 ADR은 3,080,489₫로, 1년 전 같은 시점의 2,612,314₫보다 높습니다. 일찍 여는 것이 싸게 파는 것을 뜻하지 않습니다 — 오히려 지금 등록한 호텔들이 더 비싸게 팔고 있습니다.":"ホーチミンの2027年第1四半期オンザブックADRは3,080,489₫で、1年前の同時点2,612,314₫を上回っています。早く開けることは安く売ることを意味しません — むしろ今登録したホテルの方が高く売れています。",
+"기대 효과":"期待効果",
+"2026년 온더북 실적에 M2N만 적용한 단순 환산입니다. 동계 프로모션 · 주중 요금 · 2027년 선등록 효과는 포함하지 않았습니다.":"2026年のオンザブック実績にM2Nのみを適用した単純換算です。冬季プロモーション・平日料金・2027年の事前登録による効果は含んでいません。",
+"2025 시장 (확정)":"2025年 市場（確定）",
+"2026 시장 (온더북)":"2026年 市場（オンザブック）",
+"본 호텔 숙박 비중":"当ホテルの宿泊比率",
+"숙박일 비중":"宿泊日数の構成比",
+"호치민 시장 ADR":"ホーチミン市場ADR",
+"Sotetsu Grand Fresa Saigon · 판매 현황":"Sotetsu Grand Fresa Saigon・販売状況",
+"2026-09-20까지 생성된 예약 · 체크아웃 기준 · 취소 제외 · 통화 VND":"2026年9月20日までに作成された予約・チェックアウト基準・キャンセル除外・通貨VND",
+"출처: OMH Global SCM 주간 예약 데이터(베트남, 2026-09-21 스냅샷) · 2026-09-20까지 생성된 예약 · 체크아웃 기준 · 취소 제외 · 통화 VND · 지역 평균은 호치민 전체 판매 호텔 기준입니다.":"出典：OMH Global SCM 週次予約データ（ベトナム、2026年9月21日スナップショット）・2026年9月20日までに作成された予約・チェックアウト基準・キャンセル除外・通貨VND・エリア平均はホーチミンで販売中の全ホテルが対象です。",
+"이 화면을 그리는 중 오류가 발생했습니다.":"この画面の描画中にエラーが発生しました。",
+"탭 보기":"タブ表示",
+"전체 보기":"全体表示",
+"예약 현황":"予約状況",
+"Suggestion":"Suggestion",
+"1박 예약 비중이 {a}%로 호치민 시장 {b}%보다 크게 높습니다. 이 {c}건이 2박으로만 바뀌어도 예약 건수 변화 없이 R/N이 {d}박 늘어납니다.":"1泊予約の比率が{a}%と、ホーチミン市場の{b}%を大きく上回っています。この{c}件が2泊に変わるだけで、予約件数を変えずにルームナイトが{d}泊増えます。"
+};
+TR.vi={
+"데이터 없음":"Không có dữ liệu",
+"건":" lượt",
+"평균":"trung bình",
+"중앙값":"trung vị",
+"국적":"Quốc tịch",
+"비중":"Tỷ trọng",
+"차이":"Chênh lệch",
+"본 호텔 소재 시장":"Thị trường của khách sạn",
+"일":" ngày",
+"OMH 베트남 — 주요 지역 비중":"OMH Việt Nam — tỷ trọng các thị trường chính",
+"지역":"Thị trường",
+"R/N 비중":"Tỷ trọng đêm phòng",
+"예약 비중":"Tỷ trọng lượt đặt",
+"평균 ADR (₫)":"ADR trung bình (₫)",
+"평균 LOS":"Số đêm lưu trú TB",
+"리드타임":"Thời gian đặt trước",
+"구간":"Giai đoạn",
+"가동 개월":"Số tháng hoạt động",
+"월평균 R/N":"Đêm phòng/tháng",
+"8월 판매 개시 ~ 12월":"Mở bán tháng 8 – tháng 12",
+"2025년 8월 3일 첫 체크아웃으로 판매를 시작했기 때문에 2025년은 5개월치입니다. 연간 총합끼리 비교하면 의미가 없어 가동 개월 수로 나눴습니다.":"Khách sạn bắt đầu bán với lượt trả phòng đầu tiên ngày 03/08/2025, nên năm 2025 chỉ có 5 tháng. So sánh tổng cả năm sẽ không chính xác, vì vậy chúng tôi chia theo số tháng thực tế hoạt động.",
+"작년 Q4 · 9/20 시점":"Quý 4 năm ngoái · tại 20/09",
+"R/N — 최종은":"đêm phòng — số cuối cùng là",
+"올해 Q4 · 9/20 시점":"Quý 4 năm nay · tại 20/09",
+"R/N — 작년 동시점보다 앞섬":"đêm phòng — cao hơn cùng kỳ năm ngoái",
+"호치민 시장 Q4 페이스":"Tốc độ Quý 4 của TP.HCM",
+"Q4 판매 중인 호치민 호텔":"Khách sạn TP.HCM đang bán Quý 4",
+"본 호텔 점유":"khách sạn này có",
+"판매 개시 이후 추이":"Từ khi mở bán đến nay",
+"2025년 8월에 OMH 판매를 시작한 시설이므로, 연간 총합이 아니라 가동 개월 기준으로 봅니다.":"Khách sạn bắt đầu bán trên OMH từ tháng 8/2025, nên chúng tôi xem theo tháng hoạt động thay vì tổng cả năm.",
+"월평균 판매량이 두 배가 됐습니다.":"Số đêm phòng mỗi tháng đã tăng gấp đôi.",
+"5.6박에서 11.4박으로 올라섰고, 예약 건수도 18건에서 59건으로 늘었습니다. 시작 단계는 지났다는 뜻입니다.":"Từ 5.6 lên 11.4 đêm phòng, số lượt đặt tăng từ 18 lên 59. Giai đoạn khởi động đã qua.",
+"투숙(체크아웃) 월 기준 판매":"Đêm phòng theo tháng lưu trú (trả phòng)",
+"본 호텔":"Khách sạn này",
+"호치민 시장 전체":"Toàn thị trường TP.HCM",
+"시장은 연중 고르게 팔리고 4분기에도 크게 떨어지지 않습니다.":"Thị trường bán đều quanh năm và không sụt giảm nhiều trong quý 4.",
+"4분기 예약 창이 지금 열려 있습니다":"Cửa sổ đặt phòng Quý 4 đang mở ngay lúc này",
+"작년 이 호텔의 4분기 16박은 전부 9월 20일 이후에 들어온 예약이었습니다. 즉 4분기는 지금부터 만들어집니다.":"Toàn bộ 16 đêm phòng Quý 4 của khách sạn năm ngoái đều được đặt sau ngày 20/09. Nghĩa là Quý 4 được tạo ra từ thời điểm này trở đi.",
+"시장은 작년 같은 시점의 두 배로 차 있습니다.":"Thị trường đã đầy gấp đôi so với cùng thời điểm năm ngoái.",
+"호치민 4분기 온더북은 1.642박 → 3.409박(+108%)이고, 이미 88개 호텔이 4분기를 팔고 있습니다. 작년 이 호텔은 4분기를 16박 잡았는데, 그때 ADR은 3,094,447₫으로 호치민 4분기 시장 평균 2,029,427₫보다 52% 높았습니다.":"Lượng đã đặt cho Quý 4 tại TP.HCM tăng từ 1,642 lên 3,409 đêm phòng (+108%), và 88 khách sạn đã đang bán Quý 4. Năm ngoái khách sạn này đạt 16 đêm phòng Quý 4 với ADR 3,094,447₫ — cao hơn 52% so với mức trung bình thị trường Quý 4 tại TP.HCM là 2,029,427₫.",
+"예약 건수":"Số lượt đặt",
+"지역 평균":"TB thị trường",
+"2026 vs 2025 · 2026은 온더북 · 2025는 8월 판매 개시":"2026 so với 2025 · 2026 là số đã đặt · 2025 bắt đầu bán từ tháng 8",
+"2025년은 8월 3일 첫 체크아웃 이후 5개월치입니다. 증감률은 참고용이며, 가동 개월 기준 비교는 예약 현황 탭에 있습니다.":"Cột 2025 chỉ gồm 5 tháng kể từ lượt trả phòng đầu tiên ngày 03/08. Tỷ lệ tăng giảm chỉ mang tính tham khảo; so sánh theo tháng hoạt động nằm ở tab Tình hình đặt phòng.",
+"월별 판매현황 — 투숙(체크아웃) 월":"Sản lượng theo tháng — tháng lưu trú (trả phòng)",
+"막대 = R/N · 선 = ADR(₫). 2025는 확정, 2026은 9/20 기준 온더북입니다.":"Cột = đêm phòng · đường = ADR (₫). 2025 là số cuối cùng; 2026 là số đã đặt tính đến 20/09.",
+"투숙기간 (LOS)":"Số đêm lưu trú (LOS)",
+"예약 리드타임":"Thời gian đặt trước",
+"투숙객 국적":"Quốc tịch khách lưu trú",
+"일본인 비중이 시장의 4배입니다.":"Tỷ trọng khách Nhật gấp 4 lần thị trường.",
+"일본 16.2% vs 호치민 시장 3.9%. 브랜드 인지도가 실제 예약으로 나타나고 있습니다.":"Nhật Bản 16.2% so với 3.9% của thị trường TP.HCM. Nhận diện thương hiệu đang chuyển thành đặt phòng thực tế.",
+"룸타입":"Loại phòng",
+"프로모션":"Khuyến mãi",
+"(없음)":"(không có)",
+"올해 59건 중 58건이 같은 프로모션 하나(-10% 상시 딜)에 실려 있습니다. 조기예약·연박·평일 같은 <strong>조건형 프로모션이 하나도 없습니다.</strong>":"58 trong số 59 lượt đặt năm nay nằm trên cùng một chương trình giảm 10% áp dụng thường xuyên. <strong>Không có bất kỳ khuyến mãi có điều kiện nào</strong> — không đặt sớm, không lưu trú nhiều đêm, không giá ngày thường.",
+"호텔 드릴다운":"Chi tiết khách sạn",
+"2025 · 2026 실적, 월별 판매현황, 투숙기간(LOS), 예약 리드타임, 투숙객 국적을 호치민 시장 평균과 함께 봅니다.":"Kết quả 2025 và 2026, sản lượng theo tháng, số đêm lưu trú, thời gian đặt trước và quốc tịch khách — đặt cạnh mức trung bình của thị trường TP.HCM.",
+"요청":"Đề xuất",
+"적용 기간":"Thời gian áp dụng",
+"핵심 근거":"Cơ sở",
+"동계 프로모션":"Khuyến mãi mùa đông",
+"또는":"hoặc",
+"10월 ~ 2월":"Tháng 10 – Tháng 2",
+"호치민 4분기 온더북이 작년 같은 시점의 2배(1.642 → 3.409박)이고 88개 호텔이 이미 판매 중입니다. 작년 이 호텔의 4분기 16박은 전부 9/20 이후 예약이었습니다 — 창은 지금 열려 있습니다.":"Lượng đã đặt Quý 4 tại TP.HCM gấp đôi cùng thời điểm năm ngoái (1,642 → 3,409 đêm phòng) và 88 khách sạn đã đang bán. Toàn bộ 16 đêm phòng Quý 4 của khách sạn năm ngoái đều đặt sau 20/09 — cửa sổ đang mở ngay lúc này.",
+"월~목":"Thứ 2 – Thứ 5",
+"상시":"Thường xuyên",
+"주중 ADR 3,089,276₫ — 시장 주중 평균 2,422,146₫보다 27.5% 높습니다. 그 결과 주중 숙박 비중이 58.6%로 시장 70.9%에 크게 못 미칩니다. 호치민은 평일 비즈니스 수요가 주도하는 시장입니다.":"ADR ngày thường là 3,089,276₫ — cao hơn 27.5% so với mức trung bình ngày thường của thị trường là 2,422,146₫. Hệ quả là ngày thường chỉ chiếm 58.6% số đêm phòng tại đây, so với 70.9% của thị trường. TP.HCM là thị trường do nhu cầu công vụ ngày thường dẫn dắt.",
+"2027 요금·재고 선등록":"Nạp giá và phòng cho 2027",
+"10월 내":"Trong tháng 10",
+"호치민 2027년 온더북은 835박(작년 동시점 96박, +770%), 28개 호텔이 이미 등록했습니다. 본 호텔은 0박입니다. 2027년 1분기 ADR은 3,080,489₫로 작년 같은 시점보다 오히려 17.9% 높습니다 — 할인 요청이 아니라 상승장에 올라타는 문제입니다.":"TP.HCM đã có 835 đêm phòng cho năm 2027 (cùng thời điểm năm ngoái là 96, +770%) từ 28 khách sạn. Khách sạn này chưa có đêm nào. Quý 1/2027 đang được đặt với ADR 3,080,489₫, cao hơn 17.9% so với cùng thời điểm năm ngoái — đây không phải đề nghị giảm giá, mà là việc tham gia vào một thị trường đang tăng.",
+"계약 형태가 Dynamic Rate이므로 순액 요금 재협상이 아니라 조건부 프로모션과 2027년 요금 등록을 요청드립니다.":"Do hợp đồng là Dynamic Rate, chúng tôi đề xuất khuyến mãi có điều kiện và việc nạp giá 2027, không phải đàm phán lại giá net.",
+"구분":"Hạng mục",
+"10월":"Th.10",
+"11월":"Th.11",
+"12월":"Th.12",
+"Q4 합계":"Tổng Quý 4",
+"본 호텔 2025 (확정)":"Khách sạn này 2025 (cuối cùng)",
+"본 호텔 2026 (9/20 온더북)":"Khách sạn này 2026 (đã đặt đến 20/09)",
+"호치민 소테츠 주변 시장 2025 (확정)":"Thị trường quanh Sotetsu, TP.HCM 2025 (cuối cùng)",
+"호치민 소테츠 주변 시장 2026 (9/20 온더북)":"Thị trường quanh Sotetsu, TP.HCM 2026 (đã đặt đến 20/09)",
+"단위 R/N. 2026년 수치는 아직 채워지는 중이며, 작년 호치민 4분기도 9/20 시점에는 1.642박(최종 6.492박)이었습니다.":"Đơn vị: đêm phòng. Số liệu 2026 vẫn đang được lấp đầy; Quý 4 năm ngoái tại TP.HCM cũng chỉ ở mức 1,642 đêm phòng vào ngày 20/09 và kết thúc ở 6,492.",
+"주중 비중":"Tỷ trọng ngày thường",
+"본 호텔 (박)":"Khách sạn này (đêm)",
+"본 호텔 요일별 ADR":"ADR theo ngày trong tuần",
+"호치민 시장 요일별 ADR":"ADR thị trường theo ngày",
+"호치민 시장 숙박 비중":"Tỷ trọng đêm phòng thị trường",
+"본 호텔 ADR":"ADR khách sạn này",
+"시장 평균 대비":"so với thị trường",
+"호치민 시장 평균":"TB thị trường TP.HCM",
+"상위25%":"nhóm 25% cao",
+"호치민 내 순위":"Vị trí trong TP.HCM",
+"상위":"Nhóm ",
+"개 호텔 중 ":" khách sạn · ",
+"곳이 더 저렴":" khách sạn rẻ hơn",
+"작년 대비 격차":"Khoảng cách so với năm ngoái",
+"격차는 이미 절반으로 줄었습니다":"khoảng cách đã giảm một nửa",
+"작년 동시점":"Cùng kỳ năm ngoái",
+"현재 (2027)":"Hiện tại (2027)",
+"증감":"Thay đổi",
+"호치민 R/N":"Đêm phòng TP.HCM",
+"호치민 등록 호텔 수":"Số khách sạn TP.HCM đã nạp giá",
+"베트남 전체 R/N":"Đêm phòng toàn Việt Nam",
+"본 호텔 R/N":"Khách sạn này",
+"요금 미등록":"chưa nạp giá",
+"두 열 모두 각 연도 9월 20일까지 생성된 예약 기준입니다.":"Cả hai cột đều tính các đặt phòng tạo đến ngày 20/09 của năm tương ứng.",
+"2026 현재 R/N":"Đêm phòng 2026 đến nay",
+"건 · 1박 비중 ":" lượt · 1 đêm ",
+"M2N 적용 시":"Nếu áp dụng M2N",
+"증가율":"Mức tăng",
+"예약 건수 변화 없이":"không thay đổi số lượt đặt",
+"2027 예약":"Đã đặt cho 2027",
+"지금 등록해야 채워집니다":"chỉ lấp đầy nếu nạp giá ngay",
+"Suggestion — 요청 사항":"Suggestion — Đề xuất",
+"이번 미팅에서 요청드리는 항목과, 각 항목이 왜 필요한지에 대한 실적 근거입니다.":"Những đề xuất của chúng tôi trong buổi làm việc này, kèm cơ sở dữ liệu cho từng đề xuất.",
+"목적":"Mục tiêu",
+"4분기·동계 물량 확보 · 평일 채우기 · 2027년 선점":"Giữ sản lượng Quý 4 và mùa đông · lấp đầy ngày thường · đi trước cho 2027",
+"판매 첫 해를 지나 월평균 판매량이 두 배가 됐습니다. 지금 필요한 것은 요금 인하가 아니라, 비어 있는 구간(4분기·평일)을 여는 조건과 2027년 요금 등록입니다.":"Khách sạn đã qua năm đầu tiên và số đêm phòng mỗi tháng đã tăng gấp đôi. Điều cần lúc này không phải là giảm giá, mà là các điều kiện mở ra những khoảng đang trống — Quý 4 và ngày thường — cùng với việc nạp giá 2027.",
+"근거 1 · 4분기 — 시장은 두 배로 차 있는데 본 호텔은 비어 있습니다":"Cơ sở 1 · Quý 4 — thị trường đầy gấp đôi, khách sạn vẫn trống",
+"작년 4분기는 전부 9/20 이후에 팔렸습니다.":"Toàn bộ Quý 4 năm ngoái được bán sau ngày 20/09.",
+"즉 지금이 4분기를 만드는 시점입니다. 다만 작년에는 아무 조건 없이 16박을 잡았고, 그 사이 시장의 4분기 경쟁 강도는 두 배가 됐습니다. 같은 방식으로는 같은 결과가 나오지 않습니다.":"Nghĩa là Quý 4 được xây dựng từ thời điểm này. Nhưng năm ngoái 16 đêm phòng đó đến mà không kèm điều kiện khuyến mãi nào, trong khi mức độ cạnh tranh Quý 4 của thị trường đã tăng gấp đôi. Cách làm cũ sẽ không cho kết quả cũ.",
+"호치민 시장 월별 R/N · 회색은 2025년 확정, 파란색은 2026년 온더북":"Đêm phòng thị trường TP.HCM theo tháng · xám là 2025 cuối cùng, xanh là 2026 đã đặt",
+"근거 2 · 평일 — 시장에서 가장 큰 수요를 놓치고 있습니다":"Cơ sở 2 · Ngày thường — đang bỏ lỡ nguồn cầu lớn nhất",
+"평일이 주말보다 비쌉니다.":"Ngày thường đang đắt hơn cuối tuần.",
+"본 호텔 주중 ADR은 3,089,276₫, 주말은 2,628,786₫입니다. 시장은 주중 2,422,146₫ · 주말 2,373,666₫으로 거의 차이가 없습니다. 호치민 숙박의 70.9%가 월~금에 발생하는데 본 호텔은 58.6%에 그칩니다 — 가장 큰 수요층에 가장 높은 가격을 제시하고 있는 구조입니다.":"ADR ngày thường tại đây là 3,089,276₫ so với 2,628,786₫ cuối tuần. Thị trường gần như bằng nhau: 2,422,146₫ ngày thường và 2,373,666₫ cuối tuần. 70.9% số đêm phòng tại TP.HCM rơi vào thứ 2 đến thứ 6, nhưng tại đây chỉ 58.6% — mức giá cao nhất đang được đưa ra cho nhóm cầu lớn nhất.",
+"주중 요금은 새 수요를 만드는 것이 아니라 <strong>이미 시장에 있는 수요를 가져오는 장치</strong>입니다. 월~목 전용 요금만으로도 시장 평균 수준의 주중 비중에 접근할 수 있습니다.":"Giá ngày thường không tạo ra cầu mới mà <strong>lấy về nguồn cầu đã có sẵn trên thị trường</strong>. Chỉ riêng một mức giá dành cho thứ 2 đến thứ 5 đã có thể đưa tỷ trọng ngày thường về gần mức trung bình thị trường.",
+"근거 3 · 요금 포지션 — 12개월 모두 시장 위에 있습니다":"Cơ sở 3 · Vị thế giá — cao hơn thị trường cả 12 tháng",
+"먼저 인정할 부분이 있습니다.":"Trước hết là điều đáng ghi nhận.",
+"작년 이 호텔의 ADR은 시장 평균보다 56% 높았는데 올해는 26%까지 좁혔습니다. 그 사이 판매량이 두 배가 된 것은 우연이 아닙니다. 요청드리는 것은 추가 인하가 아니라, 남은 격차를 <strong>상시 인하가 아닌 조건부 프로모션으로</strong> 메우자는 것입니다.":"Năm ngoái ADR của khách sạn cao hơn trung bình thị trường 56%; năm nay là 26%. Việc sản lượng tăng gấp đôi trong cùng giai đoạn không phải là trùng hợp. Chúng tôi không đề nghị giảm thêm — chúng tôi đề nghị thu hẹp phần còn lại <strong>bằng khuyến mãi có điều kiện thay vì giảm giá thường xuyên</strong>.",
+"막대 = 본 호텔 월별 ADR · 선 = 호치민 시장 월별 ADR (2026년 온더북 기준)":"Cột = ADR khách sạn theo tháng · đường = ADR thị trường TP.HCM theo tháng (số đã đặt năm 2026)",
+"근거 4 · 2027년 — 시장은 이미 팔고 있습니다":"Cơ sở 4 · Năm 2027 — thị trường đã bán rồi",
+"2027년 1분기는 작년보다 17.9% 높은 단가에 팔리고 있습니다.":"Quý 1/2027 đang được đặt với giá cao hơn 17.9% so với cùng thời điểm năm trước.",
+"호치민 2027년 1분기 온더북 ADR은 3,080,489₫로, 1년 전 같은 시점의 2,612,314₫보다 높습니다. 일찍 여는 것이 싸게 파는 것을 뜻하지 않습니다 — 오히려 지금 등록한 호텔들이 더 비싸게 팔고 있습니다.":"ADR đã đặt cho Quý 1/2027 tại TP.HCM là 3,080,489₫, so với 2,612,314₫ cùng thời điểm một năm trước. Mở sớm không có nghĩa là bán rẻ — chính những khách sạn đã nạp giá 2027 đang bán được giá cao hơn.",
+"기대 효과":"Tác động dự kiến",
+"2026년 온더북 실적에 M2N만 적용한 단순 환산입니다. 동계 프로모션 · 주중 요금 · 2027년 선등록 효과는 포함하지 않았습니다.":"Đây là phép quy đổi đơn giản chỉ áp dụng M2N lên số đã đặt của năm 2026. Chưa tính tác động của khuyến mãi mùa đông, giá ngày thường hay việc nạp giá 2027.",
+"2025 시장 (확정)":"Thị trường 2025 (cuối cùng)",
+"2026 시장 (온더북)":"Thị trường 2026 (đã đặt)",
+"본 호텔 숙박 비중":"Khách sạn này",
+"숙박일 비중":"Tỷ trọng đêm phòng",
+"호치민 시장 ADR":"ADR thị trường TP.HCM",
+"Sotetsu Grand Fresa Saigon · 판매 현황":"Sotetsu Grand Fresa Saigon · Báo cáo hiệu quả bán",
+"2026-09-20까지 생성된 예약 · 체크아웃 기준 · 취소 제외 · 통화 VND":"Đặt phòng tạo đến 20/09/2026 · theo ngày trả phòng · không tính hủy · đơn vị VND",
+"출처: OMH Global SCM 주간 예약 데이터(베트남, 2026-09-21 스냅샷) · 2026-09-20까지 생성된 예약 · 체크아웃 기준 · 취소 제외 · 통화 VND · 지역 평균은 호치민 전체 판매 호텔 기준입니다.":"Nguồn: dữ liệu đặt phòng hằng tuần của OMH Global SCM (Việt Nam, ảnh chụp ngày 21/09/2026) · đặt phòng tạo đến 20/09/2026 · theo ngày trả phòng · không tính hủy · đơn vị VND · trung bình thị trường gồm toàn bộ khách sạn đang bán tại TP.HCM.",
+"이 화면을 그리는 중 오류가 발생했습니다.":"Đã xảy ra lỗi khi hiển thị phần này.",
+"탭 보기":"Xem theo tab",
+"전체 보기":"Xem tất cả",
+"예약 현황":"Tình hình đặt phòng",
+"Suggestion":"Đề xuất",
+"1박 예약 비중이 {a}%로 호치민 시장 {b}%보다 크게 높습니다. 이 {c}건이 2박으로만 바뀌어도 예약 건수 변화 없이 R/N이 {d}박 늘어납니다.":"Tỷ lệ đặt 1 đêm tại đây là {a}% so với {b}% của thị trường TP.HCM. Chuyển {c} lượt đặt đó sang 2 đêm sẽ tăng thêm {d} đêm phòng mà không thay đổi số lượt đặt."
+};
+var LBL={
+  m:{ja:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
+     vi:['Th.1','Th.2','Th.3','Th.4','Th.5','Th.6','Th.7','Th.8','Th.9','Th.10','Th.11','Th.12']},
+  los:{ja:['1泊','2泊','3泊','4-5泊','6-7泊','8-14泊','15泊以上'],
+       vi:['1 đêm','2 đêm','3 đêm','4-5 đêm','6-7 đêm','8-14 đêm','15+ đêm']},
+  lead:{ja:['当日','1-3日','4-7日','8-14日','15-30日','31-60日','61-90日','91日以上'],
+        vi:['Trong ngày','1-3 ngày','4-7 ngày','8-14 ngày','15-30 ngày','31-60 ngày','61-90 ngày','91+ ngày']},
+  dow:{ja:['月','火','水','木','金','土','日'],
+       vi:['T2','T3','T4','T5','T6','T7','CN']},
+  nat:{ja:{KR:'韓国',CN:'中国',JP:'日本',VN:'ベトナム',TH:'タイ',SEA:'東南アジア',IN:'インド',WEST:'欧米',ETC:'その他'},
+       vi:{KR:'Hàn Quốc',CN:'Trung Quốc',JP:'Nhật Bản',VN:'Việt Nam',TH:'Thái Lan',SEA:'Đông Nam Á',IN:'Ấn Độ',WEST:'Âu Mỹ',ETC:'Khác'}}
+};
+
+var D = {"meta": {"cut": "2026-09-20", "basis": "checkout", "cur": "VND", "losL": ["1박", "2박", "3박", "4-5박", "6-7박", "8-14박", "15박+"], "leadL": ["당일", "1-3일", "4-7일", "8-14일", "15-30일", "31-60일", "61-90일", "91일+"], "cats": ["KR", "CN", "JP", "VN", "TH", "SEA", "IN", "WEST", "ETC"], "catLabel": {"KR": "한국", "CN": "중국", "JP": "일본", "VN": "베트남", "TH": "태국", "SEA": "동남아", "IN": "인도", "WEST": "서양", "ETC": "기타"}}, "hotels": {"Sotetsu Saigon": {"name": "Sotetsu Grand Fresa Saigon", "short": "Sotetsu Saigon", "region": "Ho Chi Minh City", "pic": "Mike", "ctype": "Dynamic Rate", "y": {"2025": {"bk": 18, "rn": 28, "ttv": 80579100.0, "adr": 2877825, "los": 1.5, "lead": 15.7, "hotels": 1, "monthly": [{"m": 1, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 2, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 3, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 4, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 5, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 6, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 7, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 8, "bk": 7, "rn": 8, "ttv": 21465950.0, "adr": 2683244}, {"m": 9, "bk": 3, "rn": 4, "ttv": 9602002.0, "adr": 2400500}, {"m": 10, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 11, "bk": 3, "rn": 5, "ttv": 15026315.0, "adr": 3005263}, {"m": 12, "bk": 5, "rn": 11, "ttv": 34484833.0, "adr": 3134985}], "losd": {"n": 18, "mean": 1.5, "med": 1.0, "b": [12, 4, 1, 1, 0, 0, 0]}, "leadd": {"n": 18, "mean": 14.2, "med": 9.5, "b": [1, 3, 4, 4, 3, 3, 0, 0]}, "nat": [{"c": "KR", "n": 1, "pct": 3.6}, {"c": "CN", "n": 15, "pct": 53.6}, {"c": "JP", "n": 4, "pct": 14.3}, {"c": "VN", "n": 1, "pct": 3.6}, {"c": "WEST", "n": 4, "pct": 14.3}, {"c": "ETC", "n": 3, "pct": 10.7}]}, "2026": {"bk": 59, "rn": 105, "ttv": 286958237.0, "adr": 2732936, "los": 1.68, "lead": 15.2, "hotels": 1, "monthly": [{"m": 1, "bk": 6, "rn": 11, "ttv": 33583974.0, "adr": 3053089}, {"m": 2, "bk": 6, "rn": 12, "ttv": 31540263.0, "adr": 2628355}, {"m": 3, "bk": 8, "rn": 10, "ttv": 30406054.0, "adr": 3040605}, {"m": 4, "bk": 2, "rn": 4, "ttv": 12233421.0, "adr": 3058355}, {"m": 5, "bk": 2, "rn": 6, "ttv": 13716579.0, "adr": 2286096}, {"m": 6, "bk": 1, "rn": 1, "ttv": 3159389.0, "adr": 3159389}, {"m": 7, "bk": 18, "rn": 29, "ttv": 75115393.0, "adr": 2590186}, {"m": 8, "bk": 11, "rn": 26, "ttv": 71415723.0, "adr": 2746759}, {"m": 9, "bk": 3, "rn": 4, "ttv": 10230790.0, "adr": 2557698}, {"m": 10, "bk": 2, "rn": 2, "ttv": 5556651.0, "adr": 2778326}, {"m": 11, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}, {"m": 12, "bk": 0, "rn": 0, "ttv": 0.0, "adr": 0}], "losd": {"n": 59, "mean": 1.68, "med": 1.0, "b": [35, 14, 7, 2, 1, 0, 0]}, "leadd": {"n": 59, "mean": 13.6, "med": 8.0, "b": [4, 19, 4, 14, 11, 5, 1, 1]}, "nat": [{"c": "KR", "n": 3, "pct": 2.9}, {"c": "CN", "n": 43, "pct": 41.0}, {"c": "JP", "n": 17, "pct": 16.2}, {"c": "VN", "n": 16, "pct": 15.2}, {"c": "TH", "n": 2, "pct": 1.9}, {"c": "SEA", "n": 2, "pct": 1.9}, {"c": "WEST", "n": 5, "pct": 4.8}, {"c": "ETC", "n": 17, "pct": 16.2}]}}, "bookmonth": {"2025-07": 1, "2025-08": 7, "2025-09": 2, "2025-10": 1, "2025-11": 5, "2025-12": 4, "2026-01": 11, "2026-02": 3, "2026-03": 7, "2026-05": 1, "2026-06": 3, "2026-07": 23, "2026-08": 7, "2026-09": 2}, "roomtypes": [{"n": "Deluxe Double", "bk": 27, "rn": 49, "adr": 2509507}, {"n": "Premier Double", "bk": 18, "rn": 30, "adr": 2898667}, {"n": "Standard Twin", "bk": 10, "rn": 19, "adr": 2790720}, {"n": "Superior Twin", "bk": 4, "rn": 7, "adr": 3429812}], "promos": [{"n": "Basic Promotion-Special Deal -10%", "bk": 58, "rn": 104}, {"n": "(없음)", "bk": 1, "rn": 1}]}}, "rgnOf": {"Sotetsu Saigon": "Ho Chi Minh City"}, "regions": {"Ho Chi Minh City": {"name": "Ho Chi Minh City", "y": {"2025": {"bk": 10978, "rn": 25848, "ttv": 47596945665.29, "adr": 1841417, "los": 2.11, "lead": 18.7, "hotels": 159, "monthly": [{"m": 1, "bk": 403, "rn": 778, "ttv": 1211164931.0, "adr": 1556767}, {"m": 2, "bk": 645, "rn": 1452, "ttv": 2759803909.0, "adr": 1900691}, {"m": 3, "bk": 795, "rn": 1819, "ttv": 3296395203.0, "adr": 1812202}, {"m": 4, "bk": 1027, "rn": 2346, "ttv": 3975749008.0, "adr": 1694693}, {"m": 5, "bk": 1305, "rn": 2940, "ttv": 5125018010.01, "adr": 1743203}, {"m": 6, "bk": 1003, "rn": 2405, "ttv": 4190055172.0299997, "adr": 1742227}, {"m": 7, "bk": 1078, "rn": 2477, "ttv": 4599586755.110001, "adr": 1856918}, {"m": 8, "bk": 1077, "rn": 2598, "ttv": 4779538375.0, "adr": 1839699}, {"m": 9, "bk": 1077, "rn": 2541, "ttv": 4484596323.139999, "adr": 1764894}, {"m": 10, "bk": 943, "rn": 2295, "ttv": 4476454209.0, "adr": 1950525}, {"m": 11, "bk": 802, "rn": 2151, "ttv": 4647737342.0, "adr": 2160733}, {"m": 12, "bk": 823, "rn": 2046, "ttv": 4050846428.0, "adr": 1979886}], "losd": {"n": 10978, "mean": 2.11, "med": 2.0, "b": [4747, 2975, 1847, 1153, 194, 52, 10]}, "leadd": {"n": 10978, "mean": 16.6, "med": 6.0, "b": [2069, 2533, 1503, 1418, 1665, 1073, 359, 344]}, "nat": [{"c": "KR", "n": 2838, "pct": 11.0}, {"c": "CN", "n": 10662, "pct": 41.2}, {"c": "JP", "n": 916, "pct": 3.5}, {"c": "VN", "n": 4382, "pct": 17.0}, {"c": "TH", "n": 262, "pct": 1.0}, {"c": "SEA", "n": 198, "pct": 0.8}, {"c": "IN", "n": 348, "pct": 1.3}, {"c": "WEST", "n": 1783, "pct": 6.9}, {"c": "ETC", "n": 4459, "pct": 17.3}]}, "2026": {"bk": 7984, "rn": 20820, "ttv": 45176938863.16, "adr": 2169882, "los": 2.35, "lead": 35.5, "hotels": 185, "monthly": [{"m": 1, "bk": 594, "rn": 1375, "ttv": 2957645722.0, "adr": 2151015}, {"m": 2, "bk": 611, "rn": 1446, "ttv": 3121218699.0, "adr": 2158519}, {"m": 3, "bk": 818, "rn": 1993, "ttv": 4966858540.01, "adr": 2492152}, {"m": 4, "bk": 729, "rn": 1824, "ttv": 4031615271.0, "adr": 2210315}, {"m": 5, "bk": 669, "rn": 1639, "ttv": 3601659686.0, "adr": 2197474}, {"m": 6, "bk": 714, "rn": 1843, "ttv": 3671518830.63, "adr": 1992143}, {"m": 7, "bk": 961, "rn": 2474, "ttv": 5215178684.0, "adr": 2107995}, {"m": 8, "bk": 944, "rn": 2375, "ttv": 5017331683.389999, "adr": 2112561}, {"m": 9, "bk": 897, "rn": 2442, "ttv": 4796699707.13, "adr": 1964250}, {"m": 10, "bk": 436, "rn": 1334, "ttv": 2966180916.0, "adr": 2223524}, {"m": 11, "bk": 322, "rn": 1104, "ttv": 2577893168.0, "adr": 2335048}, {"m": 12, "bk": 289, "rn": 971, "ttv": 2253137956.0, "adr": 2320430}], "losd": {"n": 7984, "mean": 2.35, "med": 2.0, "b": [2896, 2118, 1557, 1142, 198, 63, 10]}, "leadd": {"n": 7984, "mean": 33.2, "med": 14.0, "b": [969, 1391, 788, 856, 1237, 1208, 665, 870]}, "nat": [{"c": "KR", "n": 2489, "pct": 12.0}, {"c": "CN", "n": 7593, "pct": 36.5}, {"c": "JP", "n": 821, "pct": 3.9}, {"c": "VN", "n": 3340, "pct": 16.0}, {"c": "TH", "n": 234, "pct": 1.1}, {"c": "SEA", "n": 224, "pct": 1.1}, {"c": "IN", "n": 321, "pct": 1.5}, {"c": "WEST", "n": 1935, "pct": 9.3}, {"c": "ETC", "n": 3863, "pct": 18.6}]}}}}, "top3": {"2025": [{"r": "Nha Trang", "bkShare": 19.6, "rnShare": 20.3, "adr": 1484258, "los": 2.06, "lead": 26.7, "leadMed": 13}, {"r": "Ho Chi Minh City", "bkShare": 18.6, "rnShare": 20.1, "adr": 1841417, "los": 2.11, "lead": 16.6, "leadMed": 6}, {"r": "Da Nang", "bkShare": 11.9, "rnShare": 12.6, "adr": 1146321, "los": 2.05, "lead": 15.0, "leadMed": 5}, {"r": "Hanoi", "bkShare": 10.9, "rnShare": 11.3, "adr": 1589921, "los": 2.01, "lead": 14.4, "leadMed": 4}, {"r": "Phu Quoc", "bkShare": 8.0, "rnShare": 8.8, "adr": 2171878, "los": 2.23, "lead": 33.3, "leadMed": 21}, {"r": "Phan Thiet", "bkShare": 3.7, "rnShare": 3.4, "adr": 1732997, "los": 1.67, "lead": 21.4, "leadMed": 7}], "2026": [{"r": "Nha Trang", "bkShare": 21.7, "rnShare": 24.3, "adr": 1368957, "los": 2.41, "lead": 29.2, "leadMed": 17}, {"r": "Ho Chi Minh City", "bkShare": 12.9, "rnShare": 14.3, "adr": 2169882, "los": 2.35, "lead": 33.2, "leadMed": 14}, {"r": "Hanoi", "bkShare": 11.5, "rnShare": 11.0, "adr": 1349822, "los": 2.05, "lead": 22.8, "leadMed": 5}, {"r": "Da Nang", "bkShare": 9.0, "rnShare": 10.3, "adr": 1376905, "los": 2.4, "lead": 24.1, "leadMed": 8}, {"r": "Phu Quoc", "bkShare": 7.7, "rnShare": 8.1, "adr": 2609166, "los": 2.28, "lead": 45.5, "leadMed": 28}, {"r": "Hoi An", "bkShare": 7.0, "rnShare": 6.3, "adr": 1817314, "los": 1.91, "lead": 28.5, "leadMed": 14}]}, "sugg": {"los1": [{"k": "Sotetsu Saigon", "bk": 59, "one": 35, "onePct": 59.3, "w7": 27, "w7Pct": 45.8, "rn": 105, "rnM2N": 140}, {"k": "RGN:Ho Chi Minh City", "bk": 7984, "one": 2896, "onePct": 36.3, "w7": 3148, "w7Pct": 39.4, "rn": 20820, "rnM2N": 23716}], "dow": [{"k": "Sotetsu Saigon", "nights": 99, "월": 9, "화": 6, "수": 13, "목": 12, "금": 18, "토": 27, "일": 14, "wd": 58.6, "we": 41.4}, {"k": "RGN:Ho Chi Minh City", "nights": 18761, "월": 2398, "화": 2418, "수": 2571, "목": 2821, "금": 3088, "토": 3056, "일": 2409, "wd": 70.9, "we": 29.1}], "rgnMonth": {"Ho Chi Minh City": {"2025": [778, 1452, 1819, 2346, 2940, 2405, 2477, 2598, 2541, 2295, 2151, 2046], "2026": [1375, 1446, 1993, 1824, 1639, 1843, 2474, 2375, 2442, 1334, 1104, 971]}}, "cancel": {"HOTEL": {"cancelled": 0, "active": 59, "rate": 0.0}, "Ho Chi Minh City": {"cancelled": 0, "active": 7984, "rate": 0.0}}, "cancelVN": {"rate": 0.0}}};
+var E = {"q4": {"hotel": {"2025": {"bk": 8, "rn": 16, "adr": 3094447}, "2026": {"bk": 2, "rn": 2, "adr": 2778326}}, "rgn": {"2025": {"bk": 2568, "rn": 6492, "adr": 2029427}, "2026": {"bk": 1047, "rn": 3409, "adr": 2287243}}, "hotelM": {"2025": [0, 5, 11], "2026": [2, 0, 0]}, "rgnM": {"2025": [2295, 2151, 2046], "2026": [1334, 1104, 971]}}, "dow": {"hotel": {"n": [9, 6, 13, 12, 18, 27, 14], "nights": 99, "adr": [2926822, 4469155, 3440867, 2682841, 2727574, 2654643, 2578918], "wdPct": 58.6, "wePct": 41.4, "wdAdr": 3089276, "weAdr": 2628786, "wdN": 58, "weN": 41}, "rgn": {"n": [2398, 2418, 2571, 2821, 3088, 3056, 2409], "nights": 18761, "adr": [2403871, 2435228, 2464119, 2416643, 2396175, 2361664, 2388892], "wdPct": 70.9, "wePct": 29.1, "wdAdr": 2422146, "weAdr": 2373666, "wdN": 13296, "weN": 5465}, "labels": ["월", "화", "수", "목", "금", "토", "일"]}, "adr": {"hotelM": [3053089, 2628355, 3040605, 3058355, 2286096, 3159389, 2590186, 2746759, 2557698, 2778326, 0, 0], "rgnM": [2151015, 2158519, 2492152, 2210315, 2197474, 1992143, 2107995, 2112561, 1964250, 2223524, 2335048, 2320430], "hotel": 2732936, "rgn": 2169882, "hotel25": 2877825, "rgn25": 1841417, "peers": {"n": 122, "below": 97, "pct": 79.5, "p25": 1078537, "p50": 1665418, "p75": 2542351}}, "fwd": {"vn": {"ny": {"bk": 1170, "rn": 4439, "adr": 2106881, "hotels": 156}, "py": {"bk": 303, "rn": 1095, "adr": 2301584, "hotels": 70}}, "rgn": {"ny": {"bk": 237, "rn": 835, "adr": 3116062, "hotels": 28}, "py": {"bk": 34, "rn": 96, "adr": 2656561, "hotels": 15}}, "hotel": {"ny": {"bk": 0, "rn": 0, "adr": 0, "hotels": 0}, "py": {"bk": 0, "rn": 0, "adr": 0, "hotels": 0}}, "q1": {"y27": 2087641, "y26": 2360267}}, "m2n": {"bk": 59, "one": 35, "onePct": 59.3, "rn": 105, "gain": 35, "rgnOnePct": 36.3}, "ramp": {"2025": {"months": 5, "rn": 28, "first": "2025-08-03", "perM": 5.6}, "2026": {"months": 9, "rn": 103, "perM": 11.4}}};
+(function(){
+"use strict";
+var LANG='ko';
+var LANGS=[['ko','KO'],['en','EN'],['ja','JA'],['vi','VI']];
+/* 한국어 원문이 키입니다. ja·vi 에 없는 문구는 영어로 내려갑니다. */
+function T(ko,en){
+  if(LANG==='ko')return ko;
+  if(LANG==='en')return en;
+  var d=(typeof TR!=='undefined')&&TR[LANG];
+  var v=d?d[ko]:undefined;
+  return (v===undefined||v===null)?(en||ko):v;
+}
+/* 값이 끼어드는 문구는 {a}{b}… 자리표시자로 두고 나중에 채웁니다. */
+function TF(ko,en,vals){
+  var s=T(ko,en);
+  Object.keys(vals).forEach(function(k){s=s.split('{'+k+'}').join(vals[k]);});
+  return s;
+}
+function pick(group,fallback){
+  var g=(typeof LBL!=='undefined')&&LBL[group];
+  return (g&&g[LANG])?g[LANG]:fallback;
+}
+
+var KEY='Sotetsu Saigon', RGN='Ho Chi Minh City', MAIN='#2E5496';
+var MONTHS=['2025-01','2025-02','2025-03','2025-04','2025-05','2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12',
+            '2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
+var NATC={KR:'#2E5496',CN:'#C62828',JP:'#7E57C2',VN:'#2E7D32',TH:'#E8A33D',SEA:'#00897B',IN:'#F06292',WEST:'#5C6BC0',ETC:'#9aa6bb'};
+var NAT_EN={KR:'Korea',CN:'China',JP:'Japan',VN:'Vietnam',TH:'Thailand',SEA:'SE Asia',IN:'India',WEST:'Western',ETC:'Other'};
+var DOWK=['월','화','수','목','금','토','일'];
+function natLab(c){
+  if(LANG==='ko')return D.meta.catLabel[c]||c;
+  if(LANG==='en')return NAT_EN[c]||c;
+  var m=pick('nat',NAT_EN);
+  return m[c]||NAT_EN[c]||c;
+}
+function mLab(){
+  if(LANG==='ko')return ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  var en=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return LANG==='en'?en:pick('m',en);
+}
+function losLab(){
+  if(LANG==='ko')return D.meta.losL;
+  var en=['1 night','2 nights','3 nights','4-5','6-7','8-14','15+'];
+  return LANG==='en'?en:pick('los',en);
+}
+function leadLab(){
+  if(LANG==='ko')return D.meta.leadL;
+  var en=['Same day','1-3 d','4-7 d','8-14 d','15-30 d','31-60 d','61-90 d','91+ d'];
+  return LANG==='en'?en:pick('lead',en);
+}
+function dowLab(){
+  if(LANG==='ko')return DOWK;
+  var en=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  return LANG==='en'?en:pick('dow',en);
+}
+
+function nf(v){return (v===null||v===undefined)?'—':Number(v).toLocaleString('en-US');}
+function pctd(a,b){if(!b)return null;return (a-b)/b*100;}
+function dlt(v,suf){if(v===null||v===undefined)return '<span style="color:#9aa6bb">—</span>';
+  var s=(v>=0?'+':'')+v.toFixed(1)+(suf||'%');
+  return '<span class="'+(v>=0?'pos':'neg')+'">'+s+'</span>';}
+
+/* 숨겨진 탭 안에서 캔버스를 그리면 크기가 0으로 잡혀 빈 상자가 됩니다.
+   그래서 설정만 보관해 두었다가, 해당 구역이 실제로 보일 때 그립니다. */
+var charts={}, pending={};
+function destroy(id){
+  if(charts[id]){try{charts[id].destroy();}catch(e){} delete charts[id];}
+  delete pending[id];
+}
+function visible(el){
+  var s=el.parentElement;
+  while(s&&s.tagName!=='SECTION')s=s.parentElement;
+  if(!s)return true;
+  return s.classList.contains('on')||document.body.classList.contains('showall');
+}
+function mkChart(id,cfg){ pending[id]=cfg; flushCharts(); }
+function drawPending(){
+  Object.keys(pending).forEach(function(id){
+    var el=document.getElementById(id);
+    if(!el){delete pending[id];console.warn('canvas not found: '+id);return;}
+    if(!visible(el))return;
+    var cfg=pending[id]; delete pending[id];
+    try{ charts[id]=new Chart(el,cfg); }
+    catch(e){ console.error('chart failed: '+id+' — '+e.message); }
+  });
+  Object.keys(charts).forEach(function(k){try{charts[k].resize();}catch(e){}});
+}
+function flushCharts(){
+  if(typeof requestAnimationFrame==='function'){
+    requestAnimationFrame(function(){requestAnimationFrame(drawPending);});
+  }else{ setTimeout(drawPending,0); }
+  setTimeout(drawPending,80);
+}
+
+/* ─────────── 공통 조각 ─────────── */
+function distHTML(cur,ref,labels,curLab,refLab){
+  if(!cur||!cur.n)return '<div class="empty">'+T('데이터 없음','No data')+'</div>';
+  var mx=1;
+  labels.forEach(function(_,i){
+    var a=cur.b[i]/cur.n*100; if(a>mx)mx=a;
+    if(ref&&ref.n){var b=ref.b[i]/ref.n*100; if(b>mx)mx=b;}
+  });
+  var h='<div class="dist">';
+  labels.forEach(function(L,i){
+    var c=cur.b[i], cp=c/cur.n*100;
+    var rp=(ref&&ref.n)?ref.b[i]/ref.n*100:null;
+    h+='<div class="dist-row"><div class="dist-lab">'+L+'</div><div class="dist-track">';
+    if(rp!==null)h+='<div class="dist-ghost" style="width:'+(rp/mx*100).toFixed(1)+'%"></div>';
+    h+='<div class="dist-fill" style="width:'+(cp/mx*100).toFixed(1)+'%"></div></div>'+
+       '<div class="dist-val">'+c+T('건',' bk')+' · '+cp.toFixed(0)+'%'+
+       (rp!==null?' <span style="color:#9aa6bb">('+rp.toFixed(0)+'%)</span>':'')+'</div></div>';
+  });
+  return h+'</div><div class="mini"><span class="swatch" style="background:var(--y26)"></span>'+curLab+
+    (ref&&ref.n?' &nbsp; <span class="swatch" style="border:1.5px dashed #9aa6bb;background:rgba(154,166,187,.1)"></span>'+refLab:'')+
+    ' &nbsp;·&nbsp; '+T('평균','avg')+' '+cur.mean+' · '+T('중앙값','median')+' '+cur.med+'</div>';
+}
+function natHTML(nat,ref,refLab){
+  if(!nat||!nat.length)return '<div class="empty">'+T('데이터 없음','No data')+'</div>';
+  var rm={};if(ref)ref.forEach(function(x){rm[x.c]=x.pct;});
+  var h='<div style="display:flex;height:26px;border-radius:6px;overflow:hidden;border:1px solid var(--line);margin-bottom:12px">';
+  nat.forEach(function(x){
+    h+='<div title="'+natLab(x.c)+' '+x.pct+'%" style="width:'+x.pct+'%;background:'+(NATC[x.c]||'#9aa6bb')+
+       ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:10.5px;font-weight:700">'+
+       (x.pct>=11?natLab(x.c):'')+'</div>';
+  });
+  h+='</div><table class="fluid"><tr><th>'+T('국적','Nationality')+'</th><th class="n">R/N</th><th class="n">'+
+     T('비중','Share')+'</th><th class="n">'+refLab+'</th><th class="n">'+T('차이','Gap')+'</th></tr>';
+  nat.forEach(function(x){
+    var r=rm[x.c];
+    h+='<tr><td><span class="swatch" style="background:'+(NATC[x.c]||'#9aa6bb')+'"></span>'+natLab(x.c)+'</td>'+
+       '<td class="n">'+x.n+'</td><td class="n">'+x.pct+'%</td>'+
+       '<td class="n">'+(r!==undefined?r+'%':'—')+'</td>'+
+       '<td class="n">'+(r!==undefined?dlt(x.pct-r,'p'):'—')+'</td></tr>';
+  });
+  return h+'</table>';
+}
+/* 모바일에서 표가 뭉개지지 않도록, 넓은 표는 가로 스크롤 상자에 넣습니다.
+   fluid = 열이 적어 그대로 줄바꿈해도 되는 표 / wide = 열이 많아 더 넓게 잡는 표 */
+function wrapTables(id){
+  var sec=document.getElementById(id);
+  if(!sec)return;
+  [].forEach.call(sec.querySelectorAll('table'),function(t){
+    var p=t.parentElement;
+    if(p&&p.classList&&p.classList.contains('tscroll'))return;
+    var w=document.createElement('div');
+    w.className='tscroll';
+    p.insertBefore(w,t);
+    w.appendChild(t);
+  });
+}
+function tbl(rows,cols){
+  if(!rows||!rows.length)return '<div class="empty">'+T('데이터 없음','No data')+'</div>';
+  var h='<table class="fluid"><tr>';cols.forEach(function(c){h+='<th class="'+(c[2]||'')+'">'+c[0]+'</th>';});h+='</tr>';
+  rows.forEach(function(r){h+='<tr>';cols.forEach(function(c){h+='<td class="'+(c[2]||'')+'">'+c[1](r)+'</td>';});h+='</tr>';});
+  return h+'</table>';
+}
+
+/* ─────────── s2 : 예약 현황 ─────────── */
+function renderS2(){
+  var t26=D.top3['2026'];
+  function t3row(x){
+    var me=(x.r===RGN);
+    return '<tr'+(me?' style="background:#eef4ff"':'')+'><td><strong>'+x.r+'</strong>'+
+      (me?' <span class="pill on">'+T('본 호텔 소재 시장','This property\'s market')+'</span>':'')+'</td>'+
+      '<td class="n">'+x.rnShare.toFixed(1)+'%</td>'+
+      '<td class="n">'+x.bkShare.toFixed(1)+'%</td>'+
+      '<td class="n">'+nf(x.adr)+'</td>'+
+      '<td class="n">'+x.los.toFixed(2)+'</td>'+
+      '<td class="n">'+x.lead.toFixed(1)+T('일','d')+
+        ' <span class="sub-med">('+x.leadMed+')</span></td></tr>';
+  }
+  var scale='<div class="card"><h3 style="margin-top:0">'+
+    T('OMH 베트남 — 주요 지역 비중','OMH Vietnam — share by key market')+'</h3>'+
+    '<div class="tscroll"><table><tr><th>'+T('지역','Market')+'</th>'+
+    '<th class="n">'+T('R/N 비중','Room night share')+'</th>'+
+    '<th class="n">'+T('예약 비중','Booking share')+'</th>'+
+    '<th class="n">'+T('평균 ADR (₫)','Average ADR (₫)')+'</th>'+
+    '<th class="n">'+T('평균 LOS','Average LOS')+'</th>'+
+    '<th class="n">'+T('리드타임','Lead time')+'</th></tr>'+
+    t26.map(t3row).join('')+'</table></div></div>';
+
+  var R=E.ramp;
+  var per=pctd(R['2026'].perM,R['2025'].perM);
+  var prod='<table class="fluid"><tr><th>'+T('구간','Period')+'</th><th class="n">'+T('가동 개월','Active months')+'</th>'+
+    '<th class="n">R/N</th><th class="n">'+T('월평균 R/N','R/N per month')+'</th></tr>'+
+    '<tr><td><strong>2025</strong> <span class="sub-med">('+T('8월 판매 개시 ~ 12월','Aug launch – Dec')+')</span></td>'+
+      '<td class="n">'+R['2025'].months+'</td><td class="n">'+nf(R['2025'].rn)+'</td>'+
+      '<td class="n">'+R['2025'].perM.toFixed(1)+'</td></tr>'+
+    '<tr><td><strong>2026</strong> <span class="sub-med">(1~9/20)</span></td>'+
+      '<td class="n">'+R['2026'].months+'</td><td class="n">'+nf(R['2026'].rn)+'</td>'+
+      '<td class="n"><strong>'+R['2026'].perM.toFixed(1)+'</strong> '+dlt(per)+'</td></tr></table>'+
+    '<div class="mini">'+T('2025년 8월 3일 첫 체크아웃으로 판매를 시작했기 때문에 2025년은 5개월치입니다. 연간 총합끼리 비교하면 의미가 없어 가동 개월 수로 나눴습니다.',
+      'The property went live with its first checkout on 3 August 2025, so 2025 covers five months only. Comparing annual totals would be misleading, so the figures are divided by active months.')+'</div>';
+
+  var q=E.q4;
+  var q4kpi='<div class="kpis">'+
+    '<div class="kpi"><div class="lab">'+T('작년 Q4 · 9/20 시점','Last Q4 · as at 20 Sep')+'</div><div class="val">0</div>'+
+      '<div class="note">'+T('R/N — 최종은','room nights — final')+' '+nf(q.hotel['2025'].rn)+'</div></div>'+
+    '<div class="kpi green"><div class="lab">'+T('올해 Q4 · 9/20 시점','This Q4 · as at 20 Sep')+'</div><div class="val">'+nf(q.hotel['2026'].rn)+'</div>'+
+      '<div class="note">'+T('R/N — 작년 동시점보다 앞섬','room nights — ahead of last year')+'</div></div>'+
+    '<div class="kpi warn"><div class="lab">'+T('호치민 시장 Q4 페이스','HCMC Q4 pace')+'</div><div class="val">+108%</div>'+
+      '<div class="note">1,642 → '+nf(3409)+' R/N</div></div>'+
+    '<div class="kpi warn"><div class="lab">'+T('Q4 판매 중인 호치민 호텔','HCMC hotels selling Q4')+'</div><div class="val">88</div>'+
+      '<div class="note">'+T('본 호텔 점유','this property holds')+' '+nf(q.hotel['2026'].rn)+' R/N</div></div></div>';
+
+  document.getElementById('s2').innerHTML=
+    scale+
+    '<h2>'+T('판매 개시 이후 추이','Since launch')+'</h2>'+
+    '<p class="lede">'+T('2025년 8월에 OMH 판매를 시작한 시설이므로, 연간 총합이 아니라 가동 개월 기준으로 봅니다.',
+      'The property launched on OMH in August 2025, so we look at productivity per active month rather than annual totals.')+'</p>'+
+    '<div class="card">'+prod+
+    '<div class="callout good" style="margin-top:14px"><strong>'+
+      T('월평균 판매량이 두 배가 됐습니다.','Room nights per month have doubled.')+'</strong> '+
+      T('5.6박에서 11.4박으로 올라섰고, 예약 건수도 18건에서 59건으로 늘었습니다. 시작 단계는 지났다는 뜻입니다.',
+        'From 5.6 to 11.4 room nights, with bookings up from 18 to 59. The ramp-up phase is behind us.')+'</div></div>'+
+
+    '<h2>'+T('투숙(체크아웃) 월 기준 판매','Room nights by stay (checkout) month')+'</h2>'+
+    '<div class="grid2"><div class="card"><h3 style="margin-top:0">'+T('본 호텔','This property')+'</h3>'+
+    '<div class="chartbox"><canvas id="cStay"></canvas></div></div>'+
+    '<div class="card"><h3 style="margin-top:0">'+T('호치민 시장 전체','Ho Chi Minh City market')+'</h3>'+
+    '<div class="chartbox"><canvas id="cMkt"></canvas></div>'+
+    '<div class="mini">'+T('시장은 연중 고르게 팔리고 4분기에도 크게 떨어지지 않습니다.',
+      'The market sells evenly through the year and does not fall away in the fourth quarter.')+'</div></div></div>'+
+
+    '<h2>'+T('4분기 예약 창이 지금 열려 있습니다','The Q4 booking window is open now')+'</h2>'+
+    '<p class="lede">'+T('작년 이 호텔의 4분기 16박은 전부 9월 20일 이후에 들어온 예약이었습니다. 즉 4분기는 지금부터 만들어집니다.',
+      "All 16 of this property's Q4 room nights last year were booked after 20 September. Q4 is made from here on.")+'</p>'+
+    '<div class="card">'+q4kpi+
+    '<div class="callout alert" style="margin-top:6px"><strong>'+
+      T('시장은 작년 같은 시점의 두 배로 차 있습니다.','The market is already twice as full as it was at this point last year.')+'</strong> '+
+      T('호치민 4분기 온더북은 1,642박 → 3,409박(+108%)이고, 이미 88개 호텔이 4분기를 팔고 있습니다. 작년 이 호텔은 4분기를 16박 잡았는데, 그때 ADR은 3,094,447₫으로 호치민 4분기 시장 평균 2,029,427₫보다 52% 높았습니다.',
+        'HCMC Q4 on the books has gone from 1,642 to 3,409 room nights (+108%), and 88 hotels are already selling Q4. Last year this property captured 16 Q4 room nights at an ADR of 3,094,447₫ — 52% above the HCMC Q4 market average of 2,029,427₫.')+'</div></div>';
+
+  destroy('cStay');
+  var lab=MONTHS.map(function(m){return m.slice(2).replace('-','.');});
+  var h=D.hotels[KEY], arr=[];
+  [['2025',0],['2026',12]].forEach(function(p){
+    var y=h.y[p[0]];for(var i=0;i<12;i++)arr[p[1]+i]=y?y.monthly[i].rn:0;});
+  mkChart('cStay',{type:'bar',
+    data:{labels:lab,datasets:[{label:KEY,data:arr,backgroundColor:MAIN,borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,title:{display:true,text:'Room Night'},grid:{color:'#eef1f6'}},
+        x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:12}}}}});
+
+  destroy('cMkt');
+  var Rg=D.regions[RGN], marr=[];
+  [['2025',0],['2026',12]].forEach(function(p){
+    var y=Rg.y[p[0]];for(var i=0;i<12;i++)marr[p[1]+i]=y?y.monthly[i].rn:0;});
+  mkChart('cMkt',{type:'line',
+    data:{labels:lab,datasets:[{label:RGN,data:marr,borderColor:'#9aa6bb',backgroundColor:'#9aa6bb22',
+      borderWidth:2,tension:.3,pointRadius:2,fill:true}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,title:{display:true,text:'Room Night'},grid:{color:'#eef1f6'}},
+        x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:12}}}}});
+}
+
+/* ─────────── s3 : 호텔 드릴다운 ─────────── */
+function kpiRow(a,b){
+  function cell(lab,v25,v26,fmt,inv){
+    var d=pctd(v26,v25);
+    var cls=(d===null)?'':(((inv?-d:d)>=0)?'green':'red');
+    return '<div class="kpi '+cls+'"><div class="lab">'+lab+'</div><div class="val">'+fmt(v26)+'</div>'+
+           '<div class="note">2025 '+fmt(v25)+' · '+((d===null)?'—':dlt(d))+'</div></div>';
+  }
+  var f=function(v){return nf(v);};
+  var fl=function(v){return (v===null||v===undefined)?'—':v.toFixed(2);};
+  var fd=function(v){return (v===null||v===undefined)?'—':v.toFixed(1)+T('일',' d');};
+  var A=a||{bk:0,rn:0,ttv:0,adr:0,los:0,lead:0},B=b||{bk:0,rn:0,ttv:0,adr:0,los:0,lead:0};
+  return '<div class="kpis">'+
+    cell(T('예약 건수','Bookings'),A.bk,B.bk,f)+
+    cell('Room Night',A.rn,B.rn,f)+
+    cell('TTV (₫)',A.ttv,B.ttv,function(v){return nf(Math.round(v));})+
+    cell('ADR (₫)',A.adr,B.adr,f)+
+    cell('LOS',A.los,B.los,fl)+
+    cell(T('리드타임','Lead time'),A.lead,B.lead,fd)+'</div>';
+}
+function renderS3(){
+  var h=D.hotels[KEY], R=D.regions[h.region];
+  var a=h.y['2025'], b=h.y['2026'];
+  var rl=T('지역 평균','Market avg')+'('+h.region+')';
+  var html='<div class="card"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:baseline">'+
+    '<div><strong style="font-size:17px;color:var(--navy)">'+h.name+'</strong>'+
+    '<span class="mini" style="margin-left:10px">'+T('지역','Market')+' '+h.region+' · '+h.ctype+'</span></div>'+
+    '<div class="mini">'+T('2026 vs 2025 · 2026은 온더북 · 2025는 8월 판매 개시',
+      '2026 vs 2025 · 2026 is on the books · 2025 started selling in August')+'</div></div>'+
+    kpiRow(a,b)+
+    '<div class="mini">'+T('2025년은 8월 3일 첫 체크아웃 이후 5개월치입니다. 증감률은 참고용이며, 가동 개월 기준 비교는 예약 현황 탭에 있습니다.',
+      'The 2025 column covers only the five months from the first checkout on 3 August. Treat the percentages as indicative; the like-for-like comparison per active month is in the Booking activity tab.')+'</div></div>';
+
+  html+='<div class="card"><h3 style="margin-top:0">'+T('월별 판매현황 — 투숙(체크아웃) 월','Monthly production — by stay (checkout) month')+'</h3>'+
+    '<div class="chartbox"><canvas id="cMon"></canvas></div>'+
+    '<div class="mini">'+T('막대 = R/N · 선 = ADR(₫). 2025는 확정, 2026은 9/20 기준 온더북입니다.',
+      'Bars = room nights · line = ADR (₫). 2025 is final; 2026 is on the books as of 20 Sep.')+'</div></div>';
+
+  html+='<div class="grid2">'+
+    '<div class="card"><h3 style="margin-top:0">'+T('투숙기간 (LOS)','Length of stay')+' — 2026</h3>'+
+    distHTML(b&&b.losd,(R&&R.y['2026'])?R.y['2026'].losd:null,losLab(),'2026 '+KEY,rl)+
+    '<h3>2025</h3>'+distHTML(a&&a.losd,(R&&R.y['2025'])?R.y['2025'].losd:null,losLab(),'2025 '+KEY,rl)+'</div>'+
+    '<div class="card"><h3 style="margin-top:0">'+T('예약 리드타임','Booking lead time')+' — 2026</h3>'+
+    distHTML(b&&b.leadd,(R&&R.y['2026'])?R.y['2026'].leadd:null,leadLab(),'2026 '+KEY,rl)+
+    '<h3>2025</h3>'+distHTML(a&&a.leadd,(R&&R.y['2025'])?R.y['2025'].leadd:null,leadLab(),'2025 '+KEY,rl)+'</div></div>';
+
+  html+='<div class="grid2">'+
+    '<div class="card"><h3 style="margin-top:0">'+T('투숙객 국적','Guest nationality')+' — 2026</h3>'+
+    natHTML(b?b.nat:null,(R&&R.y['2026'])?R.y['2026'].nat:null,rl)+
+    '<div class="callout good" style="margin-top:6px"><strong>'+
+      T('일본인 비중이 시장의 4배입니다.','The Japanese share is four times the market.')+'</strong> '+
+      T('일본 16.2% vs 호치민 시장 3.9%. 브랜드 인지도가 실제 예약으로 나타나고 있습니다.',
+        'Japan 16.2% versus 3.9% for the HCMC market. Brand recognition is converting into actual bookings.')+'</div></div>'+
+    '<div class="card"><h3 style="margin-top:0">'+T('투숙객 국적','Guest nationality')+' — 2025</h3>'+
+    natHTML(a?a.nat:null,(R&&R.y['2025'])?R.y['2025'].nat:null,rl)+'</div></div>';
+
+  html+='<div class="grid2">'+
+    '<div class="card"><h3 style="margin-top:0">'+T('룸타입','Room type')+'</h3>'+
+    tbl(h.roomtypes,[[T('룸타입','Room type'),function(r){return r.n;}],['R/N',function(r){return nf(r.rn);},'n'],
+      ['ADR',function(r){return nf(r.adr);},'n']])+'</div>'+
+    '<div class="card"><h3 style="margin-top:0">'+T('프로모션','Promotion')+'</h3>'+
+    tbl(h.promos,[[T('프로모션','Promotion'),function(r){return r.n==='(없음)'?T('(없음)','(none)'):r.n;}],
+      [T('건','Bk'),function(r){return nf(r.bk);},'n'],['R/N',function(r){return nf(r.rn);},'n']])+
+    '<div class="callout" style="margin-top:6px">'+T('올해 59건 중 58건이 같은 프로모션 하나(-10% 상시 딜)에 실려 있습니다. 조기예약·연박·평일 같은 <strong>조건형 프로모션이 하나도 없습니다.</strong>',
+      'All but one of this year\'s 59 bookings sit on a single ongoing -10% deal. There is <strong>no conditional promotion at all</strong> — no early-bird, no multi-night, no weekday offer.')+'</div></div></div>';
+
+  document.getElementById('s3').innerHTML=
+    '<h2>'+T('호텔 드릴다운','Property drilldown')+'</h2>'+
+    '<p class="lede">'+T('2025 · 2026 실적, 월별 판매현황, 투숙기간(LOS), 예약 리드타임, 투숙객 국적을 호치민 시장 평균과 함께 봅니다.',
+      'Production for 2025 and 2026, monthly sales, length of stay, booking lead time and guest nationality, each against the Ho Chi Minh City market average.')+'</p>'+html;
+
+  destroy('cMon');
+  var r25=a?a.monthly.map(function(x){return x.rn;}):new Array(12).fill(0);
+  var r26=b?b.monthly.map(function(x){return x.rn;}):new Array(12).fill(0);
+  var a26=b?b.monthly.map(function(x){return x.adr||null;}):new Array(12).fill(null);
+  mkChart('cMon',{data:{labels:mLab(),datasets:[
+    {type:'bar',label:'2025 R/N',data:r25,backgroundColor:'#9BB0CE',borderRadius:4,order:3},
+    {type:'bar',label:'2026 R/N',data:r26,backgroundColor:MAIN,borderRadius:4,order:2},
+    {type:'line',label:'2026 ADR',data:a26,yAxisID:'y1',borderColor:'#E8A33D',backgroundColor:'#E8A33D',
+     borderWidth:2,tension:.25,pointRadius:3,spanGaps:true,order:1}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,boxHeight:10,usePointStyle:true,pointStyle:'circle',padding:12}},
+        tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+(c.parsed.y===null?'—':nf(c.parsed.y));}}}},
+      scales:{y:{beginAtZero:true,title:{display:true,text:'Room Night'},grid:{color:'#eef1f6'}},
+        y1:{beginAtZero:true,position:'right',title:{display:true,text:'ADR (₫)'},grid:{display:false},
+            ticks:{callback:function(v){return (v/1e6).toFixed(1)+'M';}}},
+        x:{grid:{display:false}}}}});
+}
+
+/* ─────────── s5 : Suggestion ─────────── */
+function renderS5(){
+  var S=D.sugg, q=E.q4, dw=E.dow, ad=E.adr, fw=E.fwd, m2=E.m2n;
+  function row(k){for(var i=0;i<S.los1.length;i++)if(S.los1[i].k===k)return S.los1[i];return null;}
+  var me=row(KEY), mk=row('RGN:'+RGN);
+
+  var ask='<table class="fluid"><tr><th style="width:22%">'+T('요청','Request')+'</th><th style="width:16%">'+
+    T('적용 기간','Period')+'</th><th>'+T('핵심 근거','Why')+'</th></tr>'+
+    '<tr><td><strong>'+T('동계 프로모션','Winter promotion')+'</strong><br><span class="sub-med">EB7DAYS '+T('또는','or')+' M2N</span></td>'+
+      '<td>'+T('10월 ~ 2월','Oct – Feb')+'</td><td>'+
+      T('호치민 4분기 온더북이 작년 같은 시점의 2배(1,642 → 3,409박)이고 88개 호텔이 이미 판매 중입니다. 작년 이 호텔의 4분기 16박은 전부 9/20 이후 예약이었습니다 — 창은 지금 열려 있습니다.',
+        'HCMC Q4 on the books is double the same point last year (1,642 → 3,409 room nights) and 88 hotels are already selling. All 16 of this property\'s Q4 room nights last year were booked after 20 Sep — the window is open right now.')+'</td></tr>'+
+    '<tr><td><strong>WEEKDAYS RATE</strong><br><span class="sub-med">'+T('월~목','Mon–Thu')+'</span></td>'+
+      '<td>'+T('상시','Ongoing')+'</td><td>'+
+      T('주중 ADR 3,089,276₫ — 시장 주중 평균 2,422,146₫보다 27.5% 높습니다. 그 결과 주중 숙박 비중이 58.6%로 시장 70.9%에 크게 못 미칩니다. 호치민은 평일 비즈니스 수요가 주도하는 시장입니다.',
+        'Weekday ADR is 3,089,276₫ — 27.5% above the market weekday average of 2,422,146₫. As a result weekdays are only 58.6% of nights here versus 70.9% for the market. Ho Chi Minh City is a weekday business market.')+'</td></tr>'+
+    '<tr><td><strong>'+T('2027 요금·재고 선등록','Load 2027 rates and inventory')+'</strong></td>'+
+      '<td>'+T('10월 내','During October')+'</td><td>'+
+      T('호치민 2027년 온더북은 835박(작년 동시점 96박, +770%), 28개 호텔이 이미 등록했습니다. 본 호텔은 0박입니다. 2027년 1분기 ADR은 3,080,489₫로 작년 같은 시점보다 오히려 17.9% 높습니다 — 할인 요청이 아니라 상승장에 올라타는 문제입니다.',
+        'HCMC has 835 room nights on the books for 2027 (96 at the same point last year, +770%) across 28 hotels. This property has zero. Q1 2027 is booking at an ADR of 3,080,489₫, 17.9% higher than the same point last year — this is not a request for a discount, it is about joining a rising market.')+'</td></tr></table>'+
+    '<div class="mini">'+T('계약 형태가 Dynamic Rate이므로 순액 요금 재협상이 아니라 조건부 프로모션과 2027년 요금 등록을 요청드립니다.',
+      'The contract is Dynamic Rate, so we are asking for conditional promotions and 2027 rate loading, not a renegotiation of net rates.')+'</div>';
+
+  /* 근거 1 : Q4 */
+  var t1='<table><tr><th>'+T('구분','')+'</th><th class="n">'+T('10월','Oct')+'</th><th class="n">'+
+    T('11월','Nov')+'</th><th class="n">'+T('12월','Dec')+'</th><th class="n">'+T('Q4 합계','Q4 total')+'</th></tr>'+
+    '<tr><td><strong>'+T('본 호텔 2025 (확정)','This property 2025 (final)')+'</strong></td>'+
+      q.hotelM['2025'].map(function(v){return '<td class="n">'+v+'</td>';}).join('')+
+      '<td class="n"><strong>'+q.hotel['2025'].rn+'</strong></td></tr>'+
+    '<tr><td><strong>'+T('본 호텔 2026 (9/20 온더북)','This property 2026 (on the books)')+'</strong></td>'+
+      q.hotelM['2026'].map(function(v){return '<td class="n'+(v===0?' neg':'')+'">'+v+'</td>';}).join('')+
+      '<td class="n"><strong>'+q.hotel['2026'].rn+'</strong></td></tr>'+
+    '<tr><td>'+T('호치민 소테츠 주변 시장 2025 (확정)','Market around Sotetsu, HCMC 2025 (final)')+'</td>'+
+      q.rgnM['2025'].map(function(v){return '<td class="n">'+nf(v)+'</td>';}).join('')+
+      '<td class="n">'+nf(q.rgn['2025'].rn)+'</td></tr>'+
+    '<tr><td>'+T('호치민 소테츠 주변 시장 2026 (9/20 온더북)','Market around Sotetsu, HCMC 2026 (on the books)')+'</td>'+
+      q.rgnM['2026'].map(function(v){return '<td class="n">'+nf(v)+'</td>';}).join('')+
+      '<td class="n">'+nf(q.rgn['2026'].rn)+'</td></tr></table>'+
+    '<div class="mini">'+T('단위 R/N. 2026년 수치는 아직 채워지는 중이며, 작년 호치민 4분기도 9/20 시점에는 1,642박(최종 6,492박)이었습니다.',
+      'Room nights. The 2026 figures are still filling; last year HCMC Q4 stood at 1,642 room nights on 20 Sep and finished at 6,492.')+'</div>';
+
+  /* 근거 2 : 주중 */
+  var DL=dowLab();
+  var t2='<table class="wide"><tr><th>'+T('구분','')+'</th>';
+  DL.forEach(function(d){t2+='<th class="n">'+d+'</th>';});
+  t2+='<th class="n">'+T('주중 비중','Weekday share')+'</th></tr>'+
+    '<tr><td><strong>'+T('본 호텔 (박)','This property (nights)')+'</strong></td>'+
+      dw.hotel.n.map(function(v){return '<td class="n'+(v===0?' neg':'')+'">'+v+'</td>';}).join('')+
+      '<td class="n"><strong>'+dw.hotel.wdPct+'%</strong></td></tr>'+
+    '<tr><td>'+T('본 호텔 요일별 ADR','Property ADR by day')+'</td>'+
+      dw.hotel.adr.map(function(v){return '<td class="n" style="font-size:11.5px">'+(v?(v/1e6).toFixed(2)+'M':'—')+'</td>';}).join('')+
+      '<td class="n" style="font-size:11.5px">'+(dw.hotel.wdAdr/1e6).toFixed(2)+'M</td></tr>'+
+    '<tr><td>'+T('호치민 시장 요일별 ADR','Market ADR by day')+'</td>'+
+      dw.rgn.adr.map(function(v){return '<td class="n" style="font-size:11.5px;color:#5a6475">'+(v/1e6).toFixed(2)+'M</td>';}).join('')+
+      '<td class="n" style="font-size:11.5px;color:#5a6475">'+(dw.rgn.wdAdr/1e6).toFixed(2)+'M</td></tr>'+
+    '<tr><td>'+T('호치민 시장 숙박 비중','Market share of nights')+'</td>'+
+      dw.rgn.n.map(function(v){return '<td class="n" style="color:#5a6475">'+(v/dw.rgn.nights*100).toFixed(1)+'%</td>';}).join('')+
+      '<td class="n" style="color:#5a6475">'+dw.rgn.wdPct+'%</td></tr></table>';
+
+  /* 근거 3 : ADR */
+  var p=ad.peers;
+  var t3='<div class="kpis">'+
+    '<div class="kpi red"><div class="lab">'+T('본 호텔 ADR','Property ADR')+'</div><div class="val">'+(ad.hotel/1e6).toFixed(2)+'M</div>'+
+      '<div class="note">'+T('시장 평균 대비','vs market')+' '+dlt(pctd(ad.hotel,ad.rgn))+'</div></div>'+
+    '<div class="kpi"><div class="lab">'+T('호치민 시장 평균','HCMC market avg')+'</div><div class="val">'+(ad.rgn/1e6).toFixed(2)+'M</div>'+
+      '<div class="note">'+T('중앙값','median')+' '+(p.p50/1e6).toFixed(2)+'M · '+T('상위25%','p75')+' '+(p.p75/1e6).toFixed(2)+'M</div></div>'+
+    '<div class="kpi warn"><div class="lab">'+T('호치민 내 순위','Position in HCMC')+'</div><div class="val">'+T('상위','Top ')+(100-p.pct).toFixed(0)+'%</div>'+
+      '<div class="note">'+nf(p.n)+T('개 호텔 중 ',' hotels · ')+nf(p.below)+T('곳이 더 저렴',' priced lower')+'</div></div>'+
+    '<div class="kpi green"><div class="lab">'+T('작년 대비 격차','Gap vs last year')+'</div><div class="val">+56% → +26%</div>'+
+      '<div class="note">'+T('격차는 이미 절반으로 줄었습니다','already halved')+'</div></div></div>';
+
+  /* 근거 4 : 2027 */
+  var t4='<table><tr><th>'+T('구분','')+'</th><th class="n">'+T('작년 동시점','Same point last year')+'</th>'+
+    '<th class="n">'+T('현재 (2027)','Now (2027)')+'</th><th class="n">'+T('증감','Change')+'</th></tr>'+
+    '<tr><td><strong>'+T('호치민 R/N','HCMC room nights')+'</strong></td><td class="n">'+nf(fw.rgn.py.rn)+'</td>'+
+      '<td class="n"><strong>'+nf(fw.rgn.ny.rn)+'</strong></td><td class="n">'+dlt(pctd(fw.rgn.ny.rn,fw.rgn.py.rn))+'</td></tr>'+
+    '<tr><td>'+T('호치민 등록 호텔 수','HCMC hotels loaded')+'</td><td class="n">'+fw.rgn.py.hotels+'</td>'+
+      '<td class="n">'+fw.rgn.ny.hotels+'</td><td class="n">'+dlt(pctd(fw.rgn.ny.hotels,fw.rgn.py.hotels))+'</td></tr>'+
+    '<tr><td>'+T('베트남 전체 R/N','Vietnam room nights')+'</td><td class="n">'+nf(fw.vn.py.rn)+'</td>'+
+      '<td class="n">'+nf(fw.vn.ny.rn)+'</td><td class="n">'+dlt(pctd(fw.vn.ny.rn,fw.vn.py.rn))+'</td></tr>'+
+    '<tr style="background:#fdf0ef"><td><strong>'+T('본 호텔 R/N','This property')+'</strong></td>'+
+      '<td class="n">'+fw.hotel.py.rn+'</td><td class="n neg"><strong>'+fw.hotel.ny.rn+'</strong></td>'+
+      '<td class="n neg">'+T('요금 미등록','no rate loaded')+'</td></tr></table>'+
+    '<div class="mini">'+T('두 열 모두 각 연도 9월 20일까지 생성된 예약 기준입니다.',
+      'Both columns count bookings created on or before 20 September of the respective year.')+'</div>';
+
+  /* 기대 효과 */
+  var kpi='<div class="kpis">'+
+    '<div class="kpi"><div class="lab">'+T('2026 현재 R/N','2026 room nights so far')+'</div><div class="val">'+nf(me.rn)+'</div>'+
+      '<div class="note">'+nf(me.bk)+T('건 · 1박 비중 ',' bookings · 1-night ')+me.onePct+'%</div></div>'+
+    '<div class="kpi green"><div class="lab">'+T('M2N 적용 시','With M2N')+'</div><div class="val">'+nf(me.rnM2N)+'</div>'+
+      '<div class="note">+'+nf(me.rnM2N-me.rn)+' R/N</div></div>'+
+    '<div class="kpi green"><div class="lab">'+T('증가율','Uplift')+'</div><div class="val">+'+((me.rnM2N-me.rn)/me.rn*100).toFixed(0)+'%</div>'+
+      '<div class="note">'+T('예약 건수 변화 없이','with no change in booking count')+'</div></div>'+
+    '<div class="kpi red"><div class="lab">'+T('2027 예약','2027 on books')+'</div><div class="val">0</div>'+
+      '<div class="note">'+T('지금 등록해야 채워집니다','only fills if loaded now')+'</div></div></div>';
+
+  document.getElementById('s5').innerHTML=
+    '<h2>'+T('Suggestion — 요청 사항','Suggestions')+'</h2>'+
+    '<p class="lede">'+T('이번 미팅에서 요청드리는 항목과, 각 항목이 왜 필요한지에 대한 실적 근거입니다.',
+      'What we would like to request, and the performance evidence behind each item.')+'</p>'+
+    '<div class="card hero"><div class="k">'+T('목적','Objective')+'</div>'+
+    '<h2>'+T('4분기·동계 물량 확보 · 평일 채우기 · 2027년 선점',
+      'Secure Q4 and winter volume · fill weekdays · get ahead on 2027')+'</h2>'+
+    '<p>'+T('판매 첫 해를 지나 월평균 판매량이 두 배가 됐습니다. 지금 필요한 것은 요금 인하가 아니라, 비어 있는 구간(4분기·평일)을 여는 조건과 2027년 요금 등록입니다.',
+      'The property is past its first year and room nights per month have doubled. What is needed now is not a lower rate, but the conditions that open the empty slots — Q4 and weekdays — and 2027 rates on the system.')+'</p></div>'+
+    '<div class="card">'+ask+'</div>'+
+
+    '<h2>'+T('근거 1 · 4분기 — 시장은 두 배로 차 있는데 본 호텔은 비어 있습니다',
+      'Evidence 1 · Q4 — the market is twice as full, this property is empty')+'</h2>'+
+    '<div class="card">'+t1+
+    '<div class="callout" style="margin-top:14px"><strong>'+
+      T('작년 4분기는 전부 9/20 이후에 팔렸습니다.','Every Q4 night last year was sold after 20 September.')+'</strong> '+
+      T('즉 지금이 4분기를 만드는 시점입니다. 다만 작년에는 아무 조건 없이 16박을 잡았고, 그 사이 시장의 4분기 경쟁 강도는 두 배가 됐습니다. 같은 방식으로는 같은 결과가 나오지 않습니다.',
+        'Q4 is built from this point onward. But last year those 16 nights came with no promotional condition attached, and since then Q4 competition in the market has doubled. The same approach will not produce the same result.')+'</div>'+
+    '<div class="chartbox"><canvas id="cQ4"></canvas></div>'+
+    '<div class="mini">'+T('호치민 시장 월별 R/N · 회색은 2025년 확정, 파란색은 2026년 온더북',
+      'HCMC market room nights by month · grey is 2025 final, blue is 2026 on the books')+'</div></div>'+
+
+    '<h2>'+T('근거 2 · 평일 — 시장에서 가장 큰 수요를 놓치고 있습니다',
+      'Evidence 2 · Weekdays — the largest pool of demand is being missed')+'</h2>'+
+    '<div class="card"><div class="chartbox"><canvas id="cDow"></canvas></div>'+
+    '<div class="tscroll" style="margin-top:12px">'+t2+'</div>'+
+    '<div class="callout alert" style="margin-top:12px"><strong>'+
+      T('평일이 주말보다 비쌉니다.','Weekdays are priced above weekends here.')+'</strong> '+
+      T('본 호텔 주중 ADR은 3,089,276₫, 주말은 2,628,786₫입니다. 시장은 주중 2,422,146₫ · 주말 2,373,666₫으로 거의 차이가 없습니다. 호치민 숙박의 70.9%가 월~금에 발생하는데 본 호텔은 58.6%에 그칩니다 — 가장 큰 수요층에 가장 높은 가격을 제시하고 있는 구조입니다.',
+        'Weekday ADR here is 3,089,276₫ against 2,628,786₫ at weekends. The market is effectively flat: 2,422,146₫ weekday, 2,373,666₫ weekend. 70.9% of all HCMC nights fall Monday to Friday, but only 58.6% here — the highest price is being quoted to the largest pool of demand.')+'</div>'+
+    '<div class="callout">'+T('주중 요금은 새 수요를 만드는 것이 아니라 <strong>이미 시장에 있는 수요를 가져오는 장치</strong>입니다. 월~목 전용 요금만으로도 시장 평균 수준의 주중 비중에 접근할 수 있습니다.',
+      'A weekday rate does not create new demand — it <strong>captures demand that is already in the market.</strong> A Monday-to-Thursday rate alone would move the weekday mix toward the market average.')+'</div></div>'+
+
+    '<h2>'+T('근거 3 · 요금 포지션 — 12개월 모두 시장 위에 있습니다',
+      'Evidence 3 · Rate position — above the market in all twelve months')+'</h2>'+
+    '<div class="card">'+t3+
+    '<div class="chartbox"><canvas id="cAdr"></canvas></div>'+
+    '<div class="callout good" style="margin-top:12px"><strong>'+
+      T('먼저 인정할 부분이 있습니다.','Credit where it is due.')+'</strong> '+
+      T('작년 이 호텔의 ADR은 시장 평균보다 56% 높았는데 올해는 26%까지 좁혔습니다. 그 사이 판매량이 두 배가 된 것은 우연이 아닙니다. 요청드리는 것은 추가 인하가 아니라, 남은 격차를 <strong>상시 인하가 아닌 조건부 프로모션으로</strong> 메우자는 것입니다.',
+        "Last year this property's ADR was 56% above the market average; this year it is 26%. The doubling of volume over the same period is not a coincidence. We are not asking for a further cut — we are asking to close the remaining gap with <strong>conditional promotions rather than a permanent reduction.</strong>")+'</div>'+
+    '<div class="mini">'+T('막대 = 본 호텔 월별 ADR · 선 = 호치민 시장 월별 ADR (2026년 온더북 기준)',
+      'Bars = property ADR by month · line = HCMC market ADR by month (2026 on the books)')+'</div></div>'+
+
+    '<h2>'+T('근거 4 · 2027년 — 시장은 이미 팔고 있습니다','Evidence 4 · 2027 — the market is already selling it')+'</h2>'+
+    '<div class="card">'+t4+
+    '<div class="callout alert" style="margin-top:12px"><strong>'+
+      T('2027년 1분기는 작년보다 17.9% 높은 단가에 팔리고 있습니다.','Q1 2027 is booking 17.9% higher than the same point a year ago.')+'</strong> '+
+      T('호치민 2027년 1분기 온더북 ADR은 3,080,489₫로, 1년 전 같은 시점의 2,612,314₫보다 높습니다. 일찍 여는 것이 싸게 파는 것을 뜻하지 않습니다 — 오히려 지금 등록한 호텔들이 더 비싸게 팔고 있습니다.',
+        'HCMC Q1 2027 is on the books at an ADR of 3,080,489₫ versus 2,612,314₫ at the same point a year earlier. Opening early does not mean selling cheap — the hotels that have loaded 2027 are selling at higher rates.')+'</div></div>'+
+
+    '<h2>'+T('기대 효과','Expected impact')+'</h2>'+
+    '<div class="card">'+kpi+
+    '<div class="callout" style="margin-top:6px">'+
+      TF('1박 예약 비중이 {a}%로 호치민 시장 {b}%보다 크게 높습니다. 이 {c}건이 2박으로만 바뀌어도 예약 건수 변화 없이 R/N이 {d}박 늘어납니다.',
+         'Single-night bookings are {a}% here versus {b}% for the HCMC market. Converting those {c} bookings to two nights adds {d} room nights with no change in booking count.',
+         {a:me.onePct,b:mk.onePct,c:me.one,d:me.rnM2N-me.rn})+'</div>'+
+    '<div class="mini">'+T('2026년 온더북 실적에 M2N만 적용한 단순 환산입니다. 동계 프로모션 · 주중 요금 · 2027년 선등록 효과는 포함하지 않았습니다.',
+      'A simple conversion applying M2N alone to the 2026 on-the-books figures. It excludes any effect from the winter promotion, weekday rates or loading 2027.')+'</div></div>';
+
+  destroy('cQ4');
+  mkChart('cQ4',{type:'bar',
+    data:{labels:mLab(),datasets:[
+      {label:T('2025 시장 (확정)','2025 market (final)'),data:D.regions[RGN].y['2025'].monthly.map(function(x){return x.rn;}),
+       backgroundColor:'#9BB0CE',borderRadius:3},
+      {label:T('2026 시장 (온더북)','2026 market (on the books)'),data:D.regions[RGN].y['2026'].monthly.map(function(x){return x.rn;}),
+       backgroundColor:MAIN,borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,boxHeight:10,usePointStyle:true,pointStyle:'circle',padding:12}}},
+      scales:{y:{beginAtZero:true,title:{display:true,text:'Room Night'},grid:{color:'#eef1f6'}},x:{grid:{display:false}}}}});
+
+  destroy('cDow');
+  mkChart('cDow',{
+    data:{labels:DL,datasets:[
+      {type:'bar',label:T('본 호텔 숙박 비중','This property'),
+       data:dw.hotel.n.map(function(v){return +(v/dw.hotel.nights*100).toFixed(1);}),
+       backgroundColor:MAIN,borderRadius:3},
+      {type:'line',label:T('호치민 시장 평균','HCMC market avg'),
+       data:dw.rgn.n.map(function(v){return +(v/dw.rgn.nights*100).toFixed(1);}),
+       borderColor:'#9aa6bb',borderDash:[5,4],borderWidth:2,pointRadius:0,tension:.25}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,boxHeight:10,usePointStyle:true,pointStyle:'circle',padding:12}},
+        tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+c.parsed.y+'%';}}}},
+      scales:{y:{beginAtZero:true,title:{display:true,text:T('숙박일 비중','Share of room nights')},
+        ticks:{callback:function(v){return v+'%';}},grid:{color:'#eef1f6'}},x:{grid:{display:false}}}}});
+
+  destroy('cAdr');
+  mkChart('cAdr',{
+    data:{labels:mLab(),datasets:[
+      {type:'bar',label:T('본 호텔 ADR','Property ADR'),data:ad.hotelM.map(function(v){return v||null;}),
+       backgroundColor:MAIN,borderRadius:3},
+      {type:'line',label:T('호치민 시장 ADR','HCMC market ADR'),data:ad.rgnM,
+       borderColor:'#E8A33D',borderWidth:2,pointRadius:2.5,tension:.25}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,boxHeight:10,usePointStyle:true,pointStyle:'circle',padding:12}},
+        tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+(c.parsed.y===null?'—':nf(c.parsed.y));}}}},
+      scales:{y:{beginAtZero:true,title:{display:true,text:'ADR (₫)'},grid:{color:'#eef1f6'},
+        ticks:{callback:function(v){return (v/1e6).toFixed(1)+'M';}}},x:{grid:{display:false}}}}});
+}
+
+/* ─────────── 프레임 ─────────── */
+var TABS=[['s2',['예약 현황','Booking activity']],['s3',['호텔 드릴다운','Property drilldown']],
+          ['s5',['Suggestion','Suggestions']]];
+var cur='s2';
+function renderAll(){
+  document.documentElement.lang=LANG;
+  document.getElementById('hTitle').textContent=T('Sotetsu Grand Fresa Saigon · 판매 현황','Sotetsu Grand Fresa Saigon · SCM Performance Review');
+  document.getElementById('hSub').innerHTML='Ho Chi Minh City · Dynamic Rate &nbsp;·&nbsp; '+
+    T('2026-09-20까지 생성된 예약 · 체크아웃 기준 · 취소 제외 · 통화 VND',
+      'Bookings created on or before 20 Sep 2026 · checkout basis · cancellations excluded · VND');
+  var nav=document.getElementById('nav');nav.innerHTML='';
+  TABS.forEach(function(t){
+    var b=document.createElement('button');b.textContent=T(t[1][0],t[1][1]);b.dataset.t=t[0];
+    if(t[0]===cur)b.className='on';
+    b.onclick=function(){show(t[0]);};
+    nav.appendChild(b);
+  });
+  document.getElementById('foot').innerHTML=
+    T('출처: OMH Global SCM 주간 예약 데이터(베트남, 2026-09-21 스냅샷) · 2026-09-20까지 생성된 예약 · 체크아웃 기준 · 취소 제외 · 통화 VND · 지역 평균은 호치민 전체 판매 호텔 기준입니다.',
+      'Source: OMH Global SCM weekly booking data (Vietnam, snapshot 21 Sep 2026) · bookings created on or before 20 Sep 2026 · checkout basis · cancellations excluded · VND · market averages cover all hotels selling in Ho Chi Minh City.');
+  [['s2',renderS2],['s3',renderS3],['s5',renderS5]].forEach(function(r){
+    try{ r[1](); wrapTables(r[0]); }
+    catch(e){
+      console.error('render failed: '+r[0]+' — '+e.message);
+      document.getElementById(r[0]).innerHTML=
+        '<div class="empty">'+T('이 화면을 그리는 중 오류가 발생했습니다.','This section failed to render.')+'</div>';
+    }
+  });
+  document.getElementById('btnPrint').textContent=SHOWALL?T('탭 보기','Tabs'):T('전체 보기','View all');
+  if(SHOWALL){ setShowAll(true); } else { show(cur,true); }
+}
+function show(id,skipScroll){
+  cur=id;
+  ['s2','s3','s5'].forEach(function(s){
+    document.getElementById(s).classList.toggle('on',s===id);});
+  [].forEach.call(document.querySelectorAll('nav button'),function(b){
+    b.classList.toggle('on',b.dataset.t===id);});
+  if(!skipScroll)window.scrollTo({top:0,behavior:'instant'});
+  flushCharts();
+}
+var SHOWALL=false;
+function setShowAll(on){
+  SHOWALL=on;
+  document.body.classList.toggle('showall',on);
+  document.getElementById('btnPrint').textContent=on?T('탭 보기','Tabs'):T('전체 보기','View all');
+  if(on){ ['s2','s3','s5'].forEach(function(id){document.getElementById(id).classList.add('on');}); }
+  else { show(cur,true); }
+  flushCharts();
+}
+function setLang(l){
+  if(LANG===l)return;
+  LANG=l;
+  LANGS.forEach(function(x){
+    var b=document.getElementById('b_'+x[0]);
+    if(b)b.classList.toggle('on',x[0]===l);
+  });
+  renderAll();
+}
+document.getElementById('btnPrint').onclick=function(){setShowAll(!SHOWALL);};
+LANGS.forEach(function(x){
+  var b=document.getElementById('b_'+x[0]);
+  if(b)b.onclick=function(){setLang(x[0]);};
+});
+document.addEventListener('keydown',function(e){
+  if(e.target.tagName==='INPUT')return;
+  var ids=TABS.map(function(t){return t[0];});
+  var i=ids.indexOf(cur);
+  if(e.key==='ArrowRight'&&i<ids.length-1)show(ids[i+1]);
+  if(e.key==='ArrowLeft'&&i>0)show(ids[i-1]);
+});
+renderAll();
+window.addEventListener('resize',function(){flushCharts();});
+})();
+
+</script>
+</body>
+</html>
